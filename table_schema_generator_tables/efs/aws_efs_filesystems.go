@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/efs"
 	"github.com/aws/aws-sdk-go-v2/service/efs/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -42,7 +42,7 @@ func (x *TableAwsEfsFilesystemsGenerator) GetDataSource() *schema.DataSource {
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config efs.DescribeFileSystemsInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().EFS
+			svc := c.AwsServices().Efs
 			for {
 				response, err := svc.DescribeFileSystems(ctx, &config)
 				if err != nil {
@@ -66,24 +66,12 @@ func (x *TableAwsEfsFilesystemsGenerator) GetExpandClientTask() func(ctx context
 
 func (x *TableAwsEfsFilesystemsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("availability_zone_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AvailabilityZoneName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("file_system_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("FileSystemArn")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("kms_key_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("provisioned_throughput_in_mibps").ColumnType(schema.ColumnTypeFloat).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("throughput_mode").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("life_cycle_state").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("number_of_mount_targets").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("owner_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("size_in_bytes").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("availability_zone_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("FileSystemArn")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("backup_policy_status").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -94,7 +82,7 @@ func (x *TableAwsEfsFilesystemsGenerator) GetColumns() []*schema.Column {
 						FileSystemId: p.FileSystemId,
 					}
 					cl := client.(*aws_client.Client)
-					svc := cl.AwsServices().EFS
+					svc := cl.AwsServices().Efs
 					response, err := svc.DescribeBackupPolicy(ctx, &config)
 					if err != nil {
 						if cl.IsNotFoundError(err) {
@@ -115,12 +103,41 @@ func (x *TableAwsEfsFilesystemsGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("file_system_id").ColumnType(schema.ColumnTypeString).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("encrypted").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_token").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("performance_mode").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("availability_zone_id").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("availability_zone_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AvailabilityZoneId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("size_in_bytes").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("SizeInBytes")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("kms_key_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("KmsKeyId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("file_system_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("FileSystemId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("performance_mode").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PerformanceMode")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Name")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("throughput_mode").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ThroughputMode")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("FileSystemArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("number_of_mount_targets").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("NumberOfMountTargets")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("encrypted").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("Encrypted")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("life_cycle_state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LifeCycleState")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("owner_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("OwnerId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("provisioned_throughput_in_mibps").ColumnType(schema.ColumnTypeFloat).
+			Extractor(column_value_extractor.StructSelector("ProvisionedThroughputInMibps")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreationTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_token").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CreationToken")).Build(),
 	}
 }
 

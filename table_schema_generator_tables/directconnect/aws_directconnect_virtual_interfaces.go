@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/directconnect"
 	"github.com/aws/aws-sdk-go-v2/service/directconnect/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -61,25 +61,32 @@ func (x *TableAwsDirectconnectVirtualInterfacesGenerator) GetExpandClientTask() 
 
 func (x *TableAwsDirectconnectVirtualInterfacesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("amazon_side_asn").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_logical_device_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_state").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("address_family").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("jumbo_frame_capable").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("route_filter_prefixes").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("auth_key").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("bgp_peers").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("customer_router_config").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("mtu").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_device_v2").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("customer_address").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("owner_account").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("amazon_side_asn").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("AmazonSideAsn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("auth_key").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AuthKey")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("customer_address").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CustomerAddress")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VirtualInterfaceType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("vlan").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("Vlan")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("amazon_address").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AmazonAddress")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("bgp_peers").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("BgpPeers")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VirtualInterfaceName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VirtualInterfaceId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("connection_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ConnectionId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("customer_router_config").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CustomerRouterConfig")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("jumbo_frame_capable").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("JumboFrameCapable")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
 
@@ -96,26 +103,44 @@ func (x *TableAwsDirectconnectVirtualInterfacesGenerator) GetColumns() []*schema
 
 				cl := client.(*aws_client.Client)
 				return arn.ARN{
-					Partition: cl.Partition,
-					Service:   "directconnect",
-					Region:    cl.Region,
-					AccountID: cl.AccountID,
-					Resource:  strings.Join(ids, "/"),
+					Partition:	cl.Partition,
+					Service:	"directconnect",
+					Region:		cl.Region,
+					AccountID:	cl.AccountID,
+					Resource:	strings.Join(ids, "/"),
 				}.String(), nil
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("direct_connect_gateway_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_logical_device_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AwsLogicalDeviceId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("direct_connect_gateway_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DirectConnectGatewayId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("mtu").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("Mtu")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("site_link_enabled").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("SiteLinkEnabled")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("virtual_gateway_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VirtualGatewayId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("address_family").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AddressFamily")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("asn").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("Asn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_device_v2").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AwsDeviceV2")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("location").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Location")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_id").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("VirtualInterfaceId")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("amazon_address").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("asn").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("connection_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("site_link_enabled").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("vlan").ColumnType(schema.ColumnTypeBigInt).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("owner_account").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("OwnerAccount")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("route_filter_prefixes").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("RouteFilterPrefixes")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("location").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("virtual_gateway_id").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VirtualInterfaceState")).Build(),
 	}
 }
 

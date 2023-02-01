@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/guardduty"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -37,7 +37,7 @@ func (x *TableAwsGuarddutyDetectorMembersGenerator) GetDataSource() *schema.Data
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			detector := task.ParentRawResult.(*DetectorWrapper)
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().GuardDuty
+			svc := c.AwsServices().Guardduty
 			config := &guardduty.ListMembersInput{DetectorId: aws.String(detector.Id)}
 			for {
 				output, err := svc.ListMembers(ctx, config)
@@ -66,22 +66,30 @@ func (x *TableAwsGuarddutyDetectorMembersGenerator) GetExpandClientTask() func(c
 
 func (x *TableAwsGuarddutyDetectorMembersGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("email").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("invited_at").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_guardduty_detectors_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_guardduty_detectors.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AccountId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("master_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("MasterId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("updated_at").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("UpdatedAt")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("detector_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DetectorId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("invited_at").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("InvitedAt")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
 			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_guardduty_detectors_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_guardduty_detectors.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("email").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Email")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("relationship_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RelationshipStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("administrator_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AdministratorId")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("detector_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("master_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("relationship_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("updated_at").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("administrator_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("detector_id").ColumnType(schema.ColumnTypeString).Build(),
 	}
 }
 

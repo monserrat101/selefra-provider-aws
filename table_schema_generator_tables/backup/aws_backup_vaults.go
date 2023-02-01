@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/backup"
 	"github.com/aws/aws-sdk-go-v2/service/backup/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -67,6 +67,70 @@ func (x *TableAwsBackupVaultsGenerator) GetExpandClientTask() func(ctx context.C
 
 func (x *TableAwsBackupVaultsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("access_policy").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
+				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
+
+				extractor := func() (any, error) {
+					vault := result.(types.BackupVaultListMember)
+					cl := client.(*aws_client.Client)
+					svc := cl.AwsServices().Backup
+					result, err := svc.GetBackupVaultAccessPolicy(
+						ctx,
+						&backup.GetBackupVaultAccessPolicyInput{BackupVaultName: vault.BackupVaultName},
+						func(o *backup.Options) {
+							o.Region = cl.Region
+						},
+					)
+					if err != nil {
+						if cl.IsNotFoundError(err) {
+							return nil, nil
+						}
+						return nil, err
+					}
+					if result.Policy == nil {
+						return nil, nil
+					}
+
+					var p map[string]any
+					err = json.Unmarshal([]byte(*result.Policy), &p)
+					if err != nil {
+						return nil, err
+					}
+					return p, nil
+				}
+				extractResultValue, err := extractor()
+				if err != nil {
+					return nil, schema.NewDiagnostics().AddErrorColumnValueExtractor(task.Table, column, err)
+				} else {
+					return extractResultValue, nil
+				}
+			})).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("encryption_key_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("EncryptionKeyArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("BackupVaultArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("backup_vault_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("BackupVaultArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("min_retention_days").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("MinRetentionDays")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("locked").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("Locked")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creator_request_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CreatorRequestId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("lock_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("LockDate")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("max_retention_days").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("MaxRetentionDays")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("number_of_recovery_points").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("NumberOfRecoveryPoints")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("notifications").ColumnType(schema.ColumnTypeJSON).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -94,63 +158,10 @@ func (x *TableAwsBackupVaultsGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("backup_vault_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("number_of_recovery_points").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("locked").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("max_retention_days").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("access_policy").ColumnType(schema.ColumnTypeJSON).
-			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
-				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
-
-				extractor := func() (any, error) {
-					vault := result.(types.BackupVaultListMember)
-					cl := client.(*aws_client.Client)
-					svc := cl.AwsServices().Backup
-					result, err := svc.GetBackupVaultAccessPolicy(
-						ctx,
-						&backup.GetBackupVaultAccessPolicyInput{BackupVaultName: vault.BackupVaultName},
-						func(o *backup.Options) {
-							o.Region = cl.Region
-						},
-					)
-					if err != nil {
-						if cl.IsNotFoundError(err) {
-							return nil, nil
-						}
-						return nil, err
-					}
-					if result.Policy == nil {
-						return nil, nil
-					}
-
-					var p map[string]interface{}
-					err = json.Unmarshal([]byte(*result.Policy), &p)
-					if err != nil {
-						return nil, err
-					}
-					return p, nil
-				}
-				extractResultValue, err := extractor()
-				if err != nil {
-					return nil, schema.NewDiagnostics().AddErrorColumnValueExtractor(task.Table, column, err)
-				} else {
-					return extractResultValue, nil
-				}
-			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("encryption_key_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("lock_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("BackupVaultArn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creator_request_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("min_retention_days").ColumnType(schema.ColumnTypeBigInt).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("backup_vault_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("BackupVaultName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreationDate")).Build(),
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -57,8 +57,8 @@ func (x *TableAwsRoute53HealthChecksGenerator) GetDataSource() *schema.DataSourc
 				}
 				for _, h := range healthChecks {
 					wrapper := Route53HealthCheckWrapper{
-						HealthCheck: h,
-						Tags:        aws_client.TagsToMap(getRoute53tagsByResourceID(*h.Id, tagsResponse.ResourceTagSets)),
+						HealthCheck:	h,
+						Tags:		aws_client.TagsToMap(getRoute53tagsByResourceID(*h.Id, tagsResponse.ResourceTagSets)),
 					}
 					resultChannel <- wrapper
 				}
@@ -98,7 +98,7 @@ func (x *TableAwsRoute53HealthChecksGenerator) GetDataSource() *schema.DataSourc
 
 type Route53HealthCheckWrapper struct {
 	types.HealthCheck
-	Tags map[string]string
+	Tags	map[string]string
 }
 
 func getRoute53tagsByResourceID(id string, set []types.ResourceTagSet) []types.Tag {
@@ -116,8 +116,6 @@ func (x *TableAwsRoute53HealthChecksGenerator) GetExpandClientTask() func(ctx co
 
 func (x *TableAwsRoute53HealthChecksGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
 
@@ -134,18 +132,13 @@ func (x *TableAwsRoute53HealthChecksGenerator) GetColumns() []*schema.Column {
 
 				cl := client.(*aws_client.Client)
 				return arn.ARN{
-					Partition: cl.Partition,
-					Service:   "route53",
-					Region:    "",
-					AccountID: "",
-					Resource:  strings.Join(ids, "/"),
+					Partition:	cl.Partition,
+					Service:	"route53",
+					Region:		"",
+					AccountID:	"",
+					Resource:	strings.Join(ids, "/"),
 				}.String(), nil
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Description("`The tags associated with the health check.`").Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("caller_reference").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("linked_service").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("cloud_watch_alarm_configuration_dimensions").ColumnType(schema.ColumnTypeJSON).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -169,10 +162,13 @@ func (x *TableAwsRoute53HealthChecksGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("health_check_config").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("health_check_version").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cloud_watch_alarm_configuration").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("health_check").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("HealthCheck")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Description("`The tags associated with the health check.`").Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 	}
 }
 

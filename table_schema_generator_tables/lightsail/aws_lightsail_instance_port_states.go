@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/lightsail"
 	"github.com/aws/aws-sdk-go-v2/service/lightsail/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -57,23 +57,30 @@ func (x *TableAwsLightsailInstancePortStatesGenerator) GetExpandClientTask() fun
 
 func (x *TableAwsLightsailInstancePortStatesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("to_port").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
-			Extractor(column_value_extractor.UUID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_lightsail_instances_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_lightsail_instances.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("from_port").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("FromPort")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("protocol").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Protocol")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("State")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("to_port").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("ToPort")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("instance_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("from_port").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("protocol").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
+			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_lightsail_instances_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_lightsail_instances.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cidr_list_aliases").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("CidrListAliases")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cidrs").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("Cidrs")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("ipv6_cidrs").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("Ipv6Cidrs")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cidr_list_aliases").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cidrs").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("ipv6_cidrs").ColumnType(schema.ColumnTypeStringArray).Build(),
 	}
 }
 

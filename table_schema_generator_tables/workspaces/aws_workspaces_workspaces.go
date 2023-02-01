@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/workspaces"
 	"github.com/aws/aws-sdk-go-v2/service/workspaces/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -67,7 +67,12 @@ func (x *TableAwsWorkspacesWorkspacesGenerator) GetExpandClientTask() func(ctx c
 
 func (x *TableAwsWorkspacesWorkspacesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("user_volume_encryption_enabled").ColumnType(schema.ColumnTypeBool).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("computer_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ComputerName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("modification_states").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ModificationStates")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -92,24 +97,36 @@ func (x *TableAwsWorkspacesWorkspacesGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("directory_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("error_message").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("root_volume_encryption_enabled").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("user_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("workspace_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("workspace_properties").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("error_code").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("modification_states").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("subnet_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("volume_encryption_key").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("computer_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("ip_address").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("bundle_id").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("directory_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DirectoryId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("error_code").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ErrorCode")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("ip_address").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IpAddress")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("volume_encryption_key").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VolumeEncryptionKey")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("workspace_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("WorkspaceId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("related_workspaces").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("RelatedWorkspaces")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("root_volume_encryption_enabled").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("RootVolumeEncryptionEnabled")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("user_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("UserName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("user_volume_encryption_enabled").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("UserVolumeEncryptionEnabled")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("workspace_properties").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("WorkspaceProperties")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("bundle_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("BundleId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("error_message").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ErrorMessage")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("State")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subnet_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SubnetId")).Build(),
 	}
 }
 

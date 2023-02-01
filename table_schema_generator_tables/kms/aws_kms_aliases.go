@@ -5,7 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -40,7 +40,7 @@ func (x *TableAwsKmsAliasesGenerator) GetDataSource() *schema.DataSource {
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var input kms.ListAliasesInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().KMS
+			svc := c.AwsServices().Kms
 			paginator := kms.NewListAliasesPaginator(svc, &input)
 			for paginator.HasMorePages() {
 				output, err := paginator.NextPage(ctx)
@@ -61,18 +61,24 @@ func (x *TableAwsKmsAliasesGenerator) GetExpandClientTask() func(ctx context.Con
 
 func (x *TableAwsKmsAliasesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+		table_schema_generator.NewColumnBuilder().ColumnName("alias_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("AliasArn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("alias_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("last_updated_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("target_key_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("alias_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AliasName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreationDate")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("last_updated_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("LastUpdatedDate")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("target_key_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TargetKeyId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AliasArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 	}
 }
 

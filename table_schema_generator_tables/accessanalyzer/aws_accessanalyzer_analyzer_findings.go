@@ -8,9 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/accessanalyzer"
 	"github.com/aws/aws-sdk-go-v2/service/accessanalyzer/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 )
 
 type TableAwsAccessanalyzerAnalyzerFindingsGenerator struct {
@@ -43,7 +43,7 @@ func (x *TableAwsAccessanalyzerAnalyzerFindingsGenerator) GetDataSource() *schem
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			analyzer := task.ParentRawResult.(types.AnalyzerSummary)
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().Analyzer
+			svc := c.AwsServices().Accessanalyzer
 			config := accessanalyzer.ListFindingsInput{
 				AnalyzerArn: analyzer.Arn,
 			}
@@ -71,12 +71,22 @@ func (x *TableAwsAccessanalyzerAnalyzerFindingsGenerator) GetExpandClientTask() 
 
 func (x *TableAwsAccessanalyzerAnalyzerFindingsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("error").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("is_public").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("resource").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("is_public").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("IsPublic")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("principal").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Principal")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("analyzer_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_accessanalyzer_analyzers_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_accessanalyzer_analyzers.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("condition").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Condition")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("created_at").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreatedAt")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("resource_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ResourceType")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -99,24 +109,28 @@ func (x *TableAwsAccessanalyzerAnalyzerFindingsGenerator) GetColumns() []*schema
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("created_at").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("updated_at").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("action").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("resource_owner_account").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("sources").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_accessanalyzer_analyzers_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_accessanalyzer_analyzers.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Status")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("resource").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Resource")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("error").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Error")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("analyzed_at").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("AnalyzedAt")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("resource_owner_account").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ResourceOwnerAccount")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("analyzer_arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("analyzed_at").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("condition").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("resource_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("principal").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("updated_at").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("UpdatedAt")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("action").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("Action")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("sources").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Sources")).Build(),
 	}
 }
 

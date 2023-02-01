@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"net/url"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 )
 
 type TableAwsIamRolePoliciesGenerator struct {
@@ -32,7 +31,13 @@ func (x *TableAwsIamRolePoliciesGenerator) GetVersion() uint64 {
 }
 
 func (x *TableAwsIamRolePoliciesGenerator) GetOptions() *schema.TableOptions {
-	return &schema.TableOptions{}
+	return &schema.TableOptions{
+		PrimaryKeys: []string{
+			"account_id",
+			"role_arn",
+			"policy_name",
+		},
+	}
 }
 
 func (x *TableAwsIamRolePoliciesGenerator) GetDataSource() *schema.DataSource {
@@ -41,11 +46,11 @@ func (x *TableAwsIamRolePoliciesGenerator) GetDataSource() *schema.DataSource {
 			c := client.(*aws_client.Client)
 			svc := c.AwsServices().IAM
 			role := task.ParentRawResult.(*types.Role)
-			config := iam.ListRolePoliciesInput{
+			paginator := iam.NewListRolePoliciesPaginator(svc, &iam.ListRolePoliciesInput{
 				RoleName: role.RoleName,
-			}
-			for {
-				output, err := svc.ListRolePolicies(ctx, &config)
+			})
+			for paginator.HasMorePages() {
+				output, err := paginator.NextPage(ctx)
 				if err != nil {
 					if c.IsNotFoundError(err) {
 						return nil
@@ -66,10 +71,6 @@ func (x *TableAwsIamRolePoliciesGenerator) GetDataSource() *schema.DataSource {
 					return policyResult, nil
 
 				})
-				if aws.ToString(output.Marker) == "" {
-					break
-				}
-				config.Marker = output.Marker
 			}
 			return nil
 		},
@@ -82,6 +83,12 @@ func (x *TableAwsIamRolePoliciesGenerator) GetExpandClientTask() func(ctx contex
 
 func (x *TableAwsIamRolePoliciesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("role_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_iam_roles_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_iam_roles.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("policy_document").ColumnType(schema.ColumnTypeJSON).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -94,7 +101,7 @@ func (x *TableAwsIamRolePoliciesGenerator) GetColumns() []*schema.Column {
 						return nil, err
 					}
 
-					var document map[string]interface{}
+					var document map[string]any
 					err = json.Unmarshal([]byte(decodedDocument), &document)
 					if err != nil {
 						return nil, err
@@ -109,16 +116,12 @@ func (x *TableAwsIamRolePoliciesGenerator) GetColumns() []*schema.Column {
 				}
 			})).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("policy_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("role_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
-			Extractor(column_value_extractor.UUID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_iam_roles_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_iam_roles.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("role_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RoleName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ResultMetadata")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("role_arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
 	}
 }
 

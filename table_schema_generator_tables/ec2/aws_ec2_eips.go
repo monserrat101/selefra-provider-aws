@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -37,7 +37,7 @@ func (x *TableAwsEc2EipsGenerator) GetDataSource() *schema.DataSource {
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().EC2
+			svc := c.AwsServices().Ec2
 			output, err := svc.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{
 				Filters: []types.Filter{{Name: aws.String("domain"), Values: []string{"vpc"}}},
 			})
@@ -57,26 +57,39 @@ func (x *TableAwsEc2EipsGenerator) GetExpandClientTask() func(ctx context.Contex
 
 func (x *TableAwsEc2EipsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("allocation_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("domain").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("customer_owned_ipv4_pool").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("private_ip_address").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("public_ipv4_pool").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("network_interface_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("network_interface_owner_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
-			Extractor(column_value_extractor.UUID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("carrier_ip").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("instance_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("network_border_group").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("public_ip").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("network_interface_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("NetworkInterfaceId")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("domain").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Domain")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("network_interface_owner_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("NetworkInterfaceOwnerId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("public_ip").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PublicIp")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("association_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("customer_owned_ip").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("allocation_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AllocationId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("association_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AssociationId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("customer_owned_ip").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CustomerOwnedIp")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("instance_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("InstanceId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("network_border_group").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("NetworkBorderGroup")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("private_ip_address").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PrivateIpAddress")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("public_ipv4_pool").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PublicIpv4Pool")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
+			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("carrier_ip").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CarrierIp")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("customer_owned_ipv4_pool").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CustomerOwnedIpv4Pool")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 	}
 }
 

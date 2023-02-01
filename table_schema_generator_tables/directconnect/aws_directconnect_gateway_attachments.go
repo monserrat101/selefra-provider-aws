@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/directconnect"
 	"github.com/aws/aws-sdk-go-v2/service/directconnect/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -63,25 +63,32 @@ func (x *TableAwsDirectconnectGatewayAttachmentsGenerator) GetExpandClientTask()
 
 func (x *TableAwsDirectconnectGatewayAttachmentsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("state_change_error").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_owner_account").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_region").ColumnType(schema.ColumnTypeString).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
 			Extractor(column_value_extractor.UUID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VirtualInterfaceId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_owner_account").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VirtualInterfaceOwnerAccount")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("gateway_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("gateway_id").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("id")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("attachment_state").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("attachment_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("direct_connect_gateway_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_id").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("aws_directconnect_gateways_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_directconnect_gateways.selefra_id").
 			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("attachment_state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AttachmentState")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("attachment_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AttachmentType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("direct_connect_gateway_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DirectConnectGatewayId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("state_change_error").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StateChangeError")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("virtual_interface_region").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VirtualInterfaceRegion")).Build(),
 	}
 }
 

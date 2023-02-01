@@ -1,6 +1,7 @@
 package aws_client
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -13,8 +14,8 @@ import (
 func loadOrgAccounts(ctx context.Context, awsConfig *AwsProviderConfig) ([]AwsAccount, *sts.Client, error) {
 	if awsConfig.Organization.AdminAccount == nil {
 		awsConfig.Organization.AdminAccount = &AwsAccount{
-			AccountName:		"Default-Admin-AwsAccount",
-			SharedConfigProfile:	"",
+			AccountName:		constants.DefaultAdminAwsAccount,
+			SharedConfigProfile:	constants.Constants_28,
 		}
 	}
 	awsCfg, err := newAwsConfig(ctx, awsConfig, *awsConfig.Organization.AdminAccount, nil)
@@ -54,11 +55,11 @@ func loadAccounts(ctx context.Context, awsConfig *AwsProviderConfig, accountsApi
 			continue
 		}
 		roleArn := arn.ARN{
-			Partition:	"aws",
-			Service:	"iam",
-			Region:		"",
+			Partition:	constants.Aws,
+			Service:	constants.Iam,
+			Region:		constants.Constants_29,
 			AccountID:	*account.Id,
-			Resource:	"role/" + awsConfig.Organization.ChildAccountRoleName,
+			Resource:	constants.Role + awsConfig.Organization.ChildAccountRoleName,
 		}
 		if parsed, err := arn.Parse(aws.ToString(account.Arn)); err == nil {
 			roleArn.Partition = parsed.Partition
@@ -71,7 +72,7 @@ func loadAccounts(ctx context.Context, awsConfig *AwsProviderConfig, accountsApi
 			ExternalID:		awsConfig.Organization.ChildAccountExternalID,
 			SharedConfigProfile:	awsConfig.Organization.AdminAccount.SharedConfigProfile,
 			Regions:		awsConfig.Organization.ChildAccountRegions,
-			source:			"org",
+			source:			constants.Org,
 		})
 	}
 	return accounts, err

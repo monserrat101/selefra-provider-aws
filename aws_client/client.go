@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/selefra/selefra-provider-aws/constants"
 	"os"
 	"strings"
 	"time"
@@ -21,19 +22,19 @@ import (
 	"github.com/selefra/selefra-utils/pkg/if_expression"
 )
 
-const (
-	defaultRegion         = "us-east-1"
+var (
+	defaultRegion         = constants.Useast
 	cloudfrontScopeRegion = defaultRegion
 )
 
 var envVarsToCheck = []string{
-	"AWS_PROFILE",
-	"AWS_ACCESS_KEY_ID",
-	"AWS_SECRET_ACCESS_KEY",
-	"AWS_CONFIG_FILE",
-	"AWS_ROLE_ARN",
-	"AWS_SESSION_TOKEN",
-	"AWS_SHARED_CREDENTIALS_FILE",
+	constants.AWSPROFILE,
+	constants.AWSACCESSKEYID,
+	constants.AWSSECRETACCESSKEY,
+	constants.AWSCONFIGFILE,
+	constants.AWSROLEARN,
+	constants.AWSSESSIONTOKEN,
+	constants.AWSSHAREDCREDENTIALSFILE,
 }
 
 func checkEnvVariables() string {
@@ -43,7 +44,7 @@ func checkEnvVariables() string {
 			result = append(result, v)
 		}
 	}
-	return strings.Join(result, ",")
+	return strings.Join(result, constants.Constants_0)
 }
 
 type Option func(client *Client)
@@ -71,7 +72,7 @@ type AwsAccount struct {
 	source                 string
 }
 
-const (
+var (
 	DefaultMaxAttempts = 10
 	DefaultMaxBackoff  = 30
 )
@@ -86,21 +87,21 @@ type AwsProviderConfig struct {
 
 func verifyRegions(regions []string) error {
 	if serviceRegionDataTransport == nil {
-		return errors.New("service Region data not initialized")
+		return errors.New(constants.ServiceRegiondatanotinitialized)
 	}
 
 	var hasWildcard bool
 	for i, region := range regions {
-		if region == "*" {
+		if region == constants.Constants_1 {
 			hasWildcard = true
 		}
-		if (i != 0 && region == "*") || (i > 0 && hasWildcard) {
-			return errors.New("Region wildcard \"*\" is only supported as first argument")
+		if (i != 0 && region == constants.Constants_2) || (i > 0 && hasWildcard) {
+			return errors.New(constants.Regionwildcardisonlysupportedasfirstargument)
 		}
 
 		_, regionExist := serviceRegionDataTransport.regionSet[region]
 		if !hasWildcard && !regionExist {
-			return fmt.Errorf("Region %s is not supported", region)
+			return fmt.Errorf(constants.Regionsisnotsupported, region)
 		}
 	}
 	return nil
@@ -109,7 +110,7 @@ func verifyRegions(regions []string) error {
 func filterDisabledRegions(regions []string, enabledRegions []ec2types.Region) []string {
 	regionsMap := map[string]bool{}
 	for _, r := range enabledRegions {
-		if r.RegionName != nil && r.OptInStatus != nil && *r.OptInStatus != "not-opted-in" {
+		if r.RegionName != nil && r.OptInStatus != nil && *r.OptInStatus != constants.Notoptedin {
 			regionsMap[*r.RegionName] = true
 		}
 	}
@@ -137,7 +138,7 @@ func isAllRegions(regions []string) bool {
 	}
 
 	wildcardAllRegions := false
-	if (len(regions) == 1 && regions[0] == "*") || (len(regions) == 0) {
+	if (len(regions) == 1 && regions[0] == constants.Constants_3) || (len(regions) == 0) {
 		wildcardAllRegions = true
 	}
 	return wildcardAllRegions
@@ -156,7 +157,7 @@ func newAwsConfig(ctx context.Context, cfg *AwsProviderConfig, account AwsAccoun
 		}),
 	}
 
-	if account.SharedConfigProfile != "" {
+	if account.SharedConfigProfile != constants.Constants_4 {
 		configFns = append(configFns, config.WithSharedConfigProfile(account.SharedConfigProfile))
 	}
 
@@ -168,7 +169,7 @@ func newAwsConfig(ctx context.Context, cfg *AwsProviderConfig, account AwsAccoun
 		configFns = append(configFns, config.WithSharedCredentialsFiles(account.SharedCredentialsFiles))
 	}
 
-	if account.DefaultRegion != "" {
+	if account.DefaultRegion != constants.Constants_5 {
 		configFns = append(configFns, config.WithDefaultRegion(account.DefaultRegion))
 	}
 
@@ -178,14 +179,14 @@ func newAwsConfig(ctx context.Context, cfg *AwsProviderConfig, account AwsAccoun
 		return awsCfg, err
 	}
 
-	if account.RoleARN != "" {
+	if account.RoleARN != constants.Constants_6 {
 		opts := make([]func(*stscreds.AssumeRoleOptions), 0, 1)
-		if account.ExternalID != "" {
+		if account.ExternalID != constants.Constants_7 {
 			opts = append(opts, func(opts *stscreds.AssumeRoleOptions) {
 				opts.ExternalID = &account.ExternalID
 			})
 		}
-		if account.RoleSessionName != "" {
+		if account.RoleSessionName != constants.Constants_8 {
 			opts = append(opts, func(opts *stscreds.AssumeRoleOptions) {
 				opts.RoleSessionName = account.RoleSessionName
 			})
@@ -201,11 +202,11 @@ func newAwsConfig(ctx context.Context, cfg *AwsProviderConfig, account AwsAccoun
 	if _, err := awsCfg.Credentials.Retrieve(ctx); err != nil {
 		var ae smithy.APIError
 		if errors.As(err, &ae) {
-			if strings.Contains(ae.ErrorCode(), "InvalidClientTokenId") {
-				return awsCfg, errors.New("the credentials being used to assume role are invalid. Please check that your credentials are valid in the Partition you are using. If you are using a Partition other than the AWS commercial Region, be sure set the default_region attribute in the config file")
+			if strings.Contains(ae.ErrorCode(), constants.InvalidClientTokenId) {
+				return awsCfg, errors.New(constants.ThecredentialsbeingusedtoassumeroleareinvalidPleasecheckthatyourcredentialsarevalidinthePartitionyouareusingIfyouareusingaPartitionotherthantheAWScommercialRegionbesuresetthedefaultregionattributeintheconfigfile)
 			}
 		}
-		return awsCfg, errors.New("couldn't find any credentials in environment variables or configuration files ")
+		return awsCfg, errors.New(constants.Couldntfindanycredentialsinenvironmentvariablesorconfigurationfiles)
 	}
 	return awsCfg, nil
 }
@@ -243,8 +244,8 @@ func newClient(config AwsProviderConfig) ([]*Client, error) {
 		if err != nil {
 			var ae smithy.APIError
 			if errors.As(err, &ae) {
-				if strings.Contains(ae.ErrorCode(), "AccessDenied") {
-					return nil, errors.New("failed to list Org member accounts. Make sure that your credentials have the proper permissions")
+				if strings.Contains(ae.ErrorCode(), constants.AccessDenied) {
+					return nil, errors.New(constants.FailedtolistOrgmemberaccountsMakesurethatyourcredentialshavetheproperpermissions)
 				}
 			}
 			return nil, err
@@ -252,14 +253,14 @@ func newClient(config AwsProviderConfig) ([]*Client, error) {
 	}
 
 	for _, account := range config.Accounts {
-		account.source = "AccountID"
+		account.source = constants.AccountID
 		accounts = append(accounts, account)
 	}
 
 	if len(accounts) == 0 {
 		accounts = append(accounts, AwsAccount{
-			AccountName: "default",
-			source:      "default",
+			AccountName: constants.Default,
+			source:      constants.Default,
 		})
 	}
 	for _, account := range accounts {
@@ -274,8 +275,8 @@ func newClient(config AwsProviderConfig) ([]*Client, error) {
 
 		awsCfg, err := newAwsConfig(ctx, &config, account, stsClient)
 		if err != nil {
-			if account.source == "org" {
-				principal := "unknown principal"
+			if account.source == constants.Org {
+				principal := constants.Unknownprincipal
 
 				awsAdminCfg, _ := newAwsConfig(ctx, &config, *config.Organization.AdminAccount, nil)
 				output, accountErr := sts.NewFromConfig(awsAdminCfg).GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
@@ -283,14 +284,14 @@ func newClient(config AwsProviderConfig) ([]*Client, error) {
 					principal = *output.Arn
 				}
 
-				fmt.Printf("ensure that %s has access to be able perform `sts:AssumeRole` on %s \n", principal, account.RoleARN)
+				fmt.Printf(constants.EnsurethatshasaccesstobeableperformstsAssumeRoleonsn, principal, account.RoleARN)
 
 				continue
 			}
 			var ae smithy.APIError
 			if errors.As(err, &ae) {
-				if strings.Contains(ae.ErrorCode(), "AccessDenied") {
-					fmt.Printf("failed to retrieve credentials for AccountID %s. AWS Error: %s, detected aws env variables: %s \n", account.AccountName, err.Error(), checkEnvVariables())
+				if strings.Contains(ae.ErrorCode(), constants.AccessDenied) {
+					fmt.Printf(constants.FailedtoretrievecredentialsforAccountIDsAWSErrorsdetectedawsenvvariablessn, account.AccountName, err.Error(), checkEnvVariables())
 					continue
 				}
 			}
@@ -302,7 +303,7 @@ func newClient(config AwsProviderConfig) ([]*Client, error) {
 			&ec2.DescribeRegionsInput{AllRegions: aws.Bool(false)},
 			func(o *ec2.Options) {
 				o.Region = defaultRegion
-				if account.DefaultRegion != "" {
+				if account.DefaultRegion != constants.Constants_9 {
 					o.Region = account.DefaultRegion
 				}
 
@@ -312,21 +313,21 @@ func newClient(config AwsProviderConfig) ([]*Client, error) {
 			})
 
 		if err != nil {
-			fmt.Printf("failed to find disabled regions for AccountID %s. AWS Error: %s", account.AccountName, err.Error())
+			fmt.Printf(constants.FailedtofinddisabledregionsforAccountIDsAWSErrors, account.AccountName, err.Error())
 			continue
 		}
 
 		account.Regions = filterDisabledRegions(localRegions, res.Regions)
 
 		if len(account.Regions) == 0 {
-			fmt.Printf("no enabled regions provided in config for AccountID %s", account.AccountName)
+			fmt.Printf(constants.NoenabledregionsprovidedinconfigforAccountIDs, account.AccountName)
 			continue
 		}
 		awsCfg.Region = account.Regions[0]
 		output, err := sts.NewFromConfig(awsCfg).GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 		if err != nil {
 
-			fmt.Printf("failed to get caller identity. AWS Error: %s", err.Error())
+			fmt.Printf(constants.FailedtogetcalleridentityAWSErrors, err.Error())
 			continue
 		}
 		iamArn, err := arn.Parse(*output.Arn)
@@ -353,13 +354,13 @@ func newClient(config AwsProviderConfig) ([]*Client, error) {
 		accountAwsServiceManager.initAwsServices(client.Partition, cloudfrontScopeRegion)
 
 		if client.accountAwsServiceManager.CacheCount() == 0 {
-			return nil, errors.New("no accounts instantiated")
+			return nil, errors.New(constants.Noaccountsinstantiated)
 		}
 		clients = append(clients, client)
 	}
 
 	if len(clients) == 0 {
-		return nil, errors.New("no accounts instantiated")
+		return nil, errors.New(constants.Noaccountsinstantiated)
 	}
 
 	return clients, nil
@@ -404,7 +405,7 @@ func (c *Client) GetAutoscalingNamespace() string {
 
 func SetRegion(region string) Option {
 	return func(c *Client) {
-		if region == "" {
+		if region == constants.Constants_10 {
 			return
 		}
 		c.Region = region
@@ -413,7 +414,7 @@ func SetRegion(region string) Option {
 
 func SetPartition(partition string) Option {
 	return func(c *Client) {
-		if partition == "" {
+		if partition == constants.Constants_11 {
 			return
 		}
 		c.Partition = partition
@@ -422,7 +423,7 @@ func SetPartition(partition string) Option {
 
 func SetAccount(account string) Option {
 	return func(c *Client) {
-		if account == "" {
+		if account == constants.Constants_12 {
 			return
 		}
 		c.AccountID = account
@@ -460,7 +461,7 @@ func (c *Client) AwsServices() *AwsServices {
 	awsServices := c.accountAwsServiceManager.Get(c.Partition, c.Region)
 	if awsServices == nil && c.WAFScope == types.ScopeCloudfront {
 
-		return c.accountAwsServiceManager.Get(c.Partition, "")
+		return c.accountAwsServiceManager.Get(c.Partition, constants.Constants_13)
 	}
 	return awsServices
 }
@@ -473,9 +474,9 @@ func NewAwsClient(cfg aws.Config, ops ...Option) *Client {
 	cli := &Client{
 		config:               cfg,
 		Region:               defaultRegion,
-		AutoscalingNamespace: "",
+		AutoscalingNamespace: constants.Constants_14,
 		WAFScope:             "",
-		Partition:            "",
+		Partition:            constants.Constants_16,
 	}
 	for _, op := range ops {
 		op(cli)
@@ -484,5 +485,5 @@ func NewAwsClient(cfg aws.Config, ops ...Option) *Client {
 }
 
 func (c *Client) AccountGlobalARN(service string, idParts ...string) string {
-	return makeARN(service, c.Partition, c.AccountID, "", idParts...).String()
+	return makeARN(service, c.Partition, c.AccountID, constants.Constants_17, idParts...).String()
 }

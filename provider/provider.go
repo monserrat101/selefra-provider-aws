@@ -1,38 +1,39 @@
 package provider
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"context"
-
 	"github.com/selefra/selefra-provider-aws/aws_client"
+
 	"github.com/selefra/selefra-provider-sdk/provider"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/spf13/viper"
 )
 
-const Version = "v0.0.5"
+var Version = "v0.0.5"
 
 func GetProvider() *provider.Provider {
 	return &provider.Provider{
-		Name:      "aws",
-		Version:   Version,
-		TableList: GenTables(),
+		Name:		constants.Aws,
+		Version:	Version,
+		TableList:	GenTables(),
 		ClientMeta: schema.ClientMeta{
 			InitClient: func(ctx context.Context, clientMeta *schema.ClientMeta, config *viper.Viper) ([]any, *schema.Diagnostics) {
 				var awsConfig aws_client.AwsProviderConfig
 				err := config.Unmarshal(&awsConfig)
 				if err != nil {
-					return nil, schema.NewDiagnostics().AddErrorMsg("analysis config err: %s", err.Error())
+					return nil, schema.NewDiagnostics().AddErrorMsg(constants.Analysisconfigerrs, err.Error())
 				}
 
 				clients, err := aws_client.NewClients(awsConfig)
 
 				if err != nil {
-					clientMeta.ErrorF("new clients err: %s", err.Error())
+					clientMeta.ErrorF(constants.Newclientserrs, err.Error())
 					return nil, schema.NewDiagnostics().AddError(err)
 				}
 
 				if len(clients) == 0 {
-					return nil, schema.NewDiagnostics().AddErrorMsg("account information not found")
+					return nil, schema.NewDiagnostics().AddErrorMsg(constants.Accountinformationnotfound)
 				}
 
 				hash := make(map[string]bool)
@@ -82,18 +83,18 @@ func GetProvider() *provider.Provider {
 				var awsConfig aws_client.AwsProviderConfig
 				err := config.Unmarshal(&awsConfig)
 				if err != nil {
-					return schema.NewDiagnostics().AddErrorMsg("analysis config err: %s", err.Error())
+					return schema.NewDiagnostics().AddErrorMsg(constants.Analysisconfigerrs, err.Error())
 				}
 				return nil
 			},
 		},
 		TransformerMeta: schema.TransformerMeta{
 			DefaultColumnValueConvertorBlackList: []string{
-				"",
-				"N/A",
-				"not_supported",
+				constants.Constants_34,
+				constants.NA,
+				constants.Notsupported,
 			},
-			DataSourcePullResultAutoExpand: true,
+			DataSourcePullResultAutoExpand:	true,
 		},
 		ErrorsHandlerMeta: schema.ErrorsHandlerMeta{
 			IgnoredErrors: []schema.IgnoredError{schema.IgnoredErrorAll},

@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/athena"
 	"github.com/aws/aws-sdk-go-v2/service/athena/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -46,21 +46,22 @@ func (x *TableAwsAthenaWorkGroupPreparedStatementsGenerator) GetDataSource() *sc
 					return schema.NewDiagnosticsErrorPullTable(task.Table, err)
 
 				}
-				for _, d := range response.PreparedStatements {
+				aws_client.SendResults(resultChannel, response.PreparedStatements, func(result any) (any, error) {
+					c := client.(*aws_client.Client)
+					svc := c.AwsServices().Athena
+					wg := task.ParentRawResult.(types.WorkGroup)
+
+					d := result.(types.PreparedStatementSummary)
 					dc, err := svc.GetPreparedStatement(ctx, &athena.GetPreparedStatementInput{
 						WorkGroup:	wg.Name,
 						StatementName:	d.StatementName,
 					})
 					if err != nil {
-						if c.IsNotFoundError(err) {
-							continue
-						}
-						return schema.NewDiagnosticsErrorPullTable(task.Table, err)
-
+						return nil, err
 					}
-					resultChannel <- *dc.PreparedStatement
-					return nil
-				}
+					return *dc.PreparedStatement, nil
+
+				})
 				if aws.ToString(response.NextToken) == "" {
 					break
 				}
@@ -77,21 +78,26 @@ func (x *TableAwsAthenaWorkGroupPreparedStatementsGenerator) GetExpandClientTask
 
 func (x *TableAwsAthenaWorkGroupPreparedStatementsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("work_group_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_athena_work_groups_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_athena_work_groups.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
-			Extractor(column_value_extractor.UUID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("last_modified_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("query_statement").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("statement_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StatementName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("work_group_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("WorkGroupName")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Description")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("last_modified_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("LastModifiedTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("query_statement").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("QueryStatement")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("work_group_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("statement_name").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
+			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_athena_work_groups_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_athena_work_groups.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
 	}
 }
 

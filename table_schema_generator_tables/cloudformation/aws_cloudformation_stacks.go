@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -65,39 +65,60 @@ func (x *TableAwsCloudformationStacksGenerator) GetExpandClientTask() func(ctx c
 
 func (x *TableAwsCloudformationStacksGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("StackId")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("stack_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("stack_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("deletion_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("stack_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StackName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("capabilities").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("Capabilities")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("parameters").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Parameters")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("role_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RoleARN")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("stack_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StackStatus")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("notification_ar_ns").ColumnType(schema.ColumnTypeStringArray).
 			Extractor(column_value_extractor.StructSelector("NotificationARNs")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("disable_rollback").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("DisableRollback")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("parent_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ParentId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("root_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RootId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StackId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("change_set_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ChangeSetId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("deletion_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("DeletionTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Description")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("enable_termination_protection").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("EnableTerminationProtection")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("drift_information").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("DriftInformation")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("rollback_configuration").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("RollbackConfiguration")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("stack_status_reason").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StackStatusReason")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("last_updated_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("LastUpdatedTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("outputs").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Outputs")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("StackId")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("disable_rollback").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("enable_termination_protection").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("last_updated_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("role_arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("RoleARN")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("root_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("change_set_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("parameters").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("parent_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("rollback_configuration").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("capabilities").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("drift_information").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("outputs").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("stack_status_reason").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("timeout_in_minutes").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreationTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("stack_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StackId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Tags")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("timeout_in_minutes").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("TimeoutInMinutes")).Build(),
 	}
 }
 

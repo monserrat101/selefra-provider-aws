@@ -6,9 +6,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 )
 
 type TableAwsIamVirtualMfaDevicesGenerator struct {
@@ -65,19 +65,20 @@ func (x *TableAwsIamVirtualMfaDevicesGenerator) GetExpandClientTask() func(ctx c
 
 func (x *TableAwsIamVirtualMfaDevicesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("serial_number").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("user_tags").ColumnType(schema.ColumnTypeJSON).
-			Extractor(aws_client.TagsExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("enable_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("qr_code_png").ColumnType(schema.ColumnTypeIntArray).
-			Extractor(column_value_extractor.StructSelector("QRCodePNG")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("serial_number").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("base32_string_seed").ColumnType(schema.ColumnTypeByteArray).
+			Extractor(column_value_extractor.StructSelector("Base32StringSeed")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("enable_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("EnableDate")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("qr_code_png").ColumnType(schema.ColumnTypeByteArray).
+			Extractor(column_value_extractor.StructSelector("QRCodePNG")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("base32_string_seed").ColumnType(schema.ColumnTypeIntArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("user").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("user").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("User")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 	}
 }
 

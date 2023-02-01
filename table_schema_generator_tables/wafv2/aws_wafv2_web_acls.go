@@ -8,7 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/wafv2"
 	"github.com/aws/aws-sdk-go-v2/service/wafv2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -42,11 +43,11 @@ func (x *TableAwsWafv2WebAclsGenerator) GetDataSource() *schema.DataSource {
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			c := client.(*aws_client.Client)
-			service := c.AwsServices().WafV2
+			service := c.AwsServices().Wafv2
 
 			config := wafv2.ListWebACLsInput{
-				Scope: c.WAFScope,
-				Limit: aws.Int32(100),
+				Scope:	c.WAFScope,
+				Limit:	aws.Int32(100),
 			}
 			for {
 				output, err := service.ListWebACLs(ctx, &config)
@@ -56,7 +57,7 @@ func (x *TableAwsWafv2WebAclsGenerator) GetDataSource() *schema.DataSource {
 				}
 				aws_client.SendResults(resultChannel, output.WebACLs, func(result any) (any, error) {
 					c := client.(*aws_client.Client)
-					svc := c.AwsServices().WafV2
+					svc := c.AwsServices().Wafv2
 					webAcl := result.(types.WebACLSummary)
 
 					webAclConfig := wafv2.GetWebACLInput{Id: webAcl.Id, Name: webAcl.Name, Scope: c.WAFScope}
@@ -87,8 +88,8 @@ func (x *TableAwsWafv2WebAclsGenerator) GetDataSource() *schema.DataSource {
 						webAclLoggingConfiguration = loggingConfigurationOutput.LoggingConfiguration
 					}
 					return &WebACLWrapper{
-						WebACL:               webAclOutput.WebACL,
-						LoggingConfiguration: webAclLoggingConfiguration,
+						WebACL:			webAclOutput.WebACL,
+						LoggingConfiguration:	webAclLoggingConfiguration,
 					}, nil
 
 				})
@@ -104,7 +105,7 @@ func (x *TableAwsWafv2WebAclsGenerator) GetDataSource() *schema.DataSource {
 
 type WebACLWrapper struct {
 	*types.WebACL
-	LoggingConfiguration *types.LoggingConfiguration
+	LoggingConfiguration	*types.LoggingConfiguration
 }
 
 func (x *TableAwsWafv2WebAclsGenerator) GetExpandClientTask() func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask) []*schema.ClientTaskContext {
@@ -113,20 +114,6 @@ func (x *TableAwsWafv2WebAclsGenerator) GetExpandClientTask() func(ctx context.C
 
 func (x *TableAwsWafv2WebAclsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("visibility_config").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("post_process_firewall_manager_rule_groups").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("logging_configuration").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("ARN")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("capacity").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("label_namespace").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("pre_process_firewall_manager_rule_groups").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("resources_for_web_acl").ColumnType(schema.ColumnTypeStringArray).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -135,14 +122,14 @@ func (x *TableAwsWafv2WebAclsGenerator) GetColumns() []*schema.Column {
 					webACL := result.(*WebACLWrapper)
 
 					cl := client.(*aws_client.Client)
-					service := cl.AwsServices().WafV2
+					service := cl.AwsServices().Wafv2
 
 					resourceArns := []string{}
 					if cl.WAFScope == types.ScopeCloudfront {
 						cloudfrontService := cl.AwsServices().Cloudfront
 						params := &cloudfront.ListDistributionsByWebACLIdInput{
-							WebACLId: webACL.Id,
-							MaxItems: aws.Int32(100),
+							WebACLId:	webACL.Id,
+							MaxItems:	aws.Int32(100),
 						}
 						for {
 							output, err := cloudfrontService.ListDistributionsByWebACLId(ctx, params, func(options *cloudfront.Options) {
@@ -175,15 +162,19 @@ func (x *TableAwsWafv2WebAclsGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("captcha_config").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("custom_response_bodies").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("managed_by_firewall_manager").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("rules").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ARN")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("web_acl").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("WebACL")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("logging_configuration").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("LoggingConfiguration")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("default_action").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
 	}
 }
 

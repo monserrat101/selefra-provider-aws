@@ -5,7 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/elasticache"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -38,7 +38,7 @@ func (x *TableAwsElasticacheReservedCacheNodesGenerator) GetOptions() *schema.Ta
 func (x *TableAwsElasticacheReservedCacheNodesGenerator) GetDataSource() *schema.DataSource {
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
-			paginator := elasticache.NewDescribeReservedCacheNodesPaginator(client.(*aws_client.Client).AwsServices().ElastiCache, nil)
+			paginator := elasticache.NewDescribeReservedCacheNodesPaginator(client.(*aws_client.Client).AwsServices().Elasticache, nil)
 			for paginator.HasMorePages() {
 				v, err := paginator.NextPage(ctx)
 				if err != nil {
@@ -58,26 +58,40 @@ func (x *TableAwsElasticacheReservedCacheNodesGenerator) GetExpandClientTask() f
 
 func (x *TableAwsElasticacheReservedCacheNodesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("product_description").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("reserved_cache_node_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("reserved_cache_nodes_offering_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("start_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cache_node_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("offering_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("duration").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("fixed_price").ColumnType(schema.ColumnTypeFloat).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+		table_schema_generator.NewColumnBuilder().ColumnName("reservation_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("ReservationARN")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("usage_price").ColumnType(schema.ColumnTypeFloat).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("reserved_cache_node_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ReservedCacheNodeId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("reserved_cache_nodes_offering_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ReservedCacheNodesOfferingId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("start_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("StartTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("duration").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("Duration")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("offering_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("OfferingType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("recurring_charges").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("RecurringCharges")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("State")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cache_node_count").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("CacheNodeCount")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cache_node_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CacheNodeType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("fixed_price").ColumnType(schema.ColumnTypeFloat).
+			Extractor(column_value_extractor.StructSelector("FixedPrice")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("product_description").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ProductDescription")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("usage_price").ColumnType(schema.ColumnTypeFloat).
+			Extractor(column_value_extractor.StructSelector("UsagePrice")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("recurring_charges").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cache_node_count").ColumnType(schema.ColumnTypeBigInt).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ReservationARN")).Build(),
 	}
 }
 

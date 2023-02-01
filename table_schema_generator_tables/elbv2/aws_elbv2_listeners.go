@@ -7,7 +7,7 @@ import (
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -45,7 +45,7 @@ func (x *TableAwsElbv2ListenersGenerator) GetDataSource() *schema.DataSource {
 				LoadBalancerArn: lb.LoadBalancerArn,
 			}
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().ELBv2
+			svc := c.AwsServices().Elasticloadbalancingv2
 			for {
 				response, err := svc.DescribeListeners(ctx, &config)
 				if err != nil {
@@ -72,22 +72,31 @@ func (x *TableAwsElbv2ListenersGenerator) GetExpandClientTask() func(ctx context
 
 func (x *TableAwsElbv2ListenersGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("default_actions").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("certificates").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("load_balancer_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("port").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("protocol").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("ssl_policy").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("alpn_policy").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("AlpnPolicy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("listener_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ListenerArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("protocol").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Protocol")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("certificates").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Certificates")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("default_actions").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("DefaultActions")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("ListenerArn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("alpn_policy").ColumnType(schema.ColumnTypeStringArray).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("port").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("Port")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("ssl_policy").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SslPolicy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("load_balancer_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LoadBalancerArn")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("aws_elbv2_load_balancers_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_elbv2_load_balancers.selefra_id").
 			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
 	}

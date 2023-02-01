@@ -2,11 +2,14 @@ package apigateway
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/apigateway"
 	"github.com/aws/aws-sdk-go-v2/service/apigateway/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -61,13 +64,38 @@ func (x *TableAwsApigatewayDomainNamesGenerator) GetExpandClientTask() func(ctx 
 
 func (x *TableAwsApigatewayDomainNamesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("distribution_domain_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("regional_domain_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("security_policy").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("regional_hosted_zone_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RegionalHostedZoneId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("security_policy").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SecurityPolicy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Tags")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("certificate_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CertificateArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("certificate_upload_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CertificateUploadDate")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("ownership_verification_certificate_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("OwnershipVerificationCertificateArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("regional_certificate_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RegionalCertificateArn")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("distribution_domain_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DistributionDomainName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("domain_name_status_message").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DomainNameStatusMessage")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("mutual_tls_authentication").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("MutualTlsAuthentication")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("certificate_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CertificateName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("distribution_hosted_zone_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DistributionHostedZoneId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("domain_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DomainName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("regional_domain_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RegionalDomainName")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -75,10 +103,13 @@ func (x *TableAwsApigatewayDomainNamesGenerator) GetColumns() []*schema.Column {
 				extractor := func() (any, error) {
 					cl := client.(*aws_client.Client)
 					domain := result.(types.DomainName)
-					arn := cl.RegionGlobalARN("apigateway", "/domainnames",
-
-						*domain.DomainName)
-					return arn, nil
+					return arn.ARN{
+						Partition:	cl.Partition,
+						Service:	string("apigateway"),
+						Region:		cl.Region,
+						AccountID:	"",
+						Resource:	fmt.Sprintf("/domainnames/%s", aws.ToString(domain.DomainName)),
+					}.String(), nil
 				}
 				extractResultValue, err := extractor()
 				if err != nil {
@@ -87,22 +118,14 @@ func (x *TableAwsApigatewayDomainNamesGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("certificate_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("domain_name_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("regional_certificate_name").ColumnType(schema.ColumnTypeString).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("distribution_hosted_zone_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("domain_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("domain_name_status_message").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("ownership_verification_certificate_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("regional_certificate_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("regional_hosted_zone_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("certificate_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("certificate_upload_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("endpoint_configuration").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("mutual_tls_authentication").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("domain_name_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DomainNameStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("endpoint_configuration").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("EndpointConfiguration")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("regional_certificate_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RegionalCertificateName")).Build(),
 	}
 }
 

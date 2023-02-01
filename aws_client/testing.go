@@ -1,6 +1,7 @@
 package aws_client
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"context"
 	"github.com/selefra/selefra-provider-sdk/test_helper"
 	"github.com/spf13/viper"
@@ -16,27 +17,27 @@ type TestOptions struct{}
 func MockTestHelper(t *testing.T, table *schema.Table, builder func(*testing.T, *gomock.Controller) AwsServices, _ TestOptions) {
 	ctrl := gomock.NewController(t)
 	testProvider := newTestProvider(t, ctrl, table, builder)
-	config := "test : test"
-	test_helper.RunProviderPullTables(testProvider, config, "./", "*")
+	config := constants.Testtest
+	test_helper.RunProviderPullTables(testProvider, config, constants.Constants_30, constants.Constants_31)
 }
 
 func newTestProvider(t *testing.T, ctrl *gomock.Controller, table *schema.Table, builder func(*testing.T, *gomock.Controller) AwsServices) *provider.Provider {
 	return &provider.Provider{
-		Name:		"aws",
-		Version:	"v0.0.1",
+		Name:		constants.Aws,
+		Version:	constants.V,
 		TableList:	[]*schema.Table{table},
 		ClientMeta: schema.ClientMeta{
 			InitClient: func(ctx context.Context, clientMeta *schema.ClientMeta, config *viper.Viper) ([]any, *schema.Diagnostics) {
 
-				partition := "selefra-mock-aws"
-				region := "us-east-1"
+				partition := constants.Seleframockaws
+				region := constants.Useast
 				awsServices := builder(t, ctrl)
 				accountAwsServiceManager := NewAwsServiceCache(nil)
 				accountAwsServiceManager.AwsServicesManagerMap[partition] = make(map[string]*AwsServices, 0)
 				accountAwsServiceManager.AwsServicesManagerMap[partition][region] = &awsServices
 				client := &Client{
 					Partition:			partition,
-					AccountID:			"testAccount",
+					AccountID:			constants.TestAccount,
 					Region:				region,
 					accountAwsServiceManager:	accountAwsServiceManager,
 				}
@@ -80,9 +81,9 @@ func newTestProvider(t *testing.T, ctrl *gomock.Controller, table *schema.Table,
 		},
 		TransformerMeta: schema.TransformerMeta{
 			DefaultColumnValueConvertorBlackList: []string{
-				"",
-				"N/A",
-				"not_supported",
+				constants.Constants_32,
+				constants.NA,
+				constants.Notsupported,
 			},
 			DataSourcePullResultAutoExpand:	true,
 		},

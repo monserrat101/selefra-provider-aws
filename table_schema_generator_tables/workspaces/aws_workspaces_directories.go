@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/workspaces"
 	"github.com/aws/aws-sdk-go-v2/service/workspaces/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -67,13 +67,44 @@ func (x *TableAwsWorkspacesDirectoriesGenerator) GetExpandClientTask() func(ctx 
 
 func (x *TableAwsWorkspacesDirectoriesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("ip_group_ids").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("registration_code").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selfservice_permissions").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("ip_group_ids").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("IpGroupIds")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("saml_properties").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("SamlProperties")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selfservice_permissions").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("SelfservicePermissions")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("dns_ip_addresses").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("DnsIpAddresses")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("registration_code").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RegistrationCode")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subnet_ids").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("SubnetIds")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("workspace_access_properties").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("WorkspaceAccessProperties")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("directory_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DirectoryId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("certificate_based_auth_properties").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("CertificateBasedAuthProperties")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("State")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tenancy").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Tenancy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("workspace_security_group_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("WorkspaceSecurityGroupId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("customer_user_name").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("alias").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Alias")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("directory_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DirectoryName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("directory_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DirectoryType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("iam_role_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IamRoleId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("workspace_creation_properties").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("WorkspaceCreationProperties")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -98,20 +129,8 @@ func (x *TableAwsWorkspacesDirectoriesGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("directory_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("dns_ip_addresses").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("workspace_access_properties").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("directory_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("iam_role_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("subnet_ids").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("directory_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("saml_properties").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tenancy").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("workspace_creation_properties").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("workspace_security_group_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("alias").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("customer_user_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CustomerUserName")).Build(),
 	}
 }
 

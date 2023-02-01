@@ -1,6 +1,7 @@
 package faker
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -16,11 +17,11 @@ type Option func(*faker)
 func (f faker) getFakedValue(a interface{}) (reflect.Value, error) {
 	t := reflect.TypeOf(a)
 	if t == nil {
-		return reflect.Value{}, fmt.Errorf("interface{} not allowed")
+		return reflect.Value{}, fmt.Errorf(constants.Interfacenotallowed)
 	}
 	f.maxDepth--
 	if f.maxDepth < 0 {
-		return reflect.Value{}, fmt.Errorf("max_depth reached")
+		return reflect.Value{}, fmt.Errorf(constants.Maxdepthreached)
 	}
 	k := t.Kind()
 
@@ -41,7 +42,7 @@ func (f faker) getFakedValue(a interface{}) (reflect.Value, error) {
 		return v, nil
 	case reflect.Struct:
 		switch t.String() {
-		case "time.Time":
+		case constants.TimeTime:
 			ft := time.Now().Add(time.Duration(rand.Int63()))
 			return reflect.ValueOf(ft), nil
 		default:
@@ -62,7 +63,7 @@ func (f faker) getFakedValue(a interface{}) (reflect.Value, error) {
 			return v, nil
 		}
 	case reflect.String:
-		return reflect.ValueOf("test string"), nil
+		return reflect.ValueOf(constants.Teststring), nil
 	case reflect.Slice:
 		sliceLen := 1
 		v := reflect.MakeSlice(t, sliceLen, sliceLen)
@@ -137,7 +138,7 @@ func (f faker) getFakedValue(a interface{}) (reflect.Value, error) {
 		}
 		return v, nil
 	default:
-		err := fmt.Errorf("no support for kind %+v", t)
+		err := fmt.Errorf(constants.Nosupportforkindv, t)
 		return reflect.Value{}, err
 	}
 }
@@ -152,11 +153,11 @@ func FakeObject(obj interface{}, opts ...Option) error {
 	reflectType := reflect.TypeOf(obj)
 
 	if reflectType.Kind() != reflect.Ptr {
-		return fmt.Errorf("object is not a pointer")
+		return fmt.Errorf(constants.Objectisnotapointer)
 	}
 
 	if reflect.ValueOf(obj).IsNil() {
-		return fmt.Errorf("object is nil %s", reflectType.Elem().String())
+		return fmt.Errorf(constants.Objectisnils, reflectType.Elem().String())
 	}
 	f := &faker{
 		maxDepth: 12,

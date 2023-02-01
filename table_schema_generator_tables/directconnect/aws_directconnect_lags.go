@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/directconnect"
 	"github.com/aws/aws-sdk-go-v2/service/directconnect/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -61,21 +61,6 @@ func (x *TableAwsDirectconnectLagsGenerator) GetExpandClientTask() func(ctx cont
 
 func (x *TableAwsDirectconnectLagsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("encryption_mode").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("mac_sec_capable").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("connections").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("location").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_device_v2").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_logical_device_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("connections_bandwidth").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("has_logical_redundancy").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("jumbo_frame_capable").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("mac_sec_keys").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("owner_account").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
 
@@ -92,25 +77,60 @@ func (x *TableAwsDirectconnectLagsGenerator) GetColumns() []*schema.Column {
 
 				cl := client.(*aws_client.Client)
 				return arn.ARN{
-					Partition: cl.Partition,
-					Service:   "directconnect",
-					Region:    cl.Region,
-					AccountID: cl.AccountID,
-					Resource:  strings.Join(ids, "/"),
+					Partition:	cl.Partition,
+					Service:	"directconnect",
+					Region:		cl.Region,
+					AccountID:	cl.AccountID,
+					Resource:	strings.Join(ids, "/"),
 				}.String(), nil
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("allows_hosted_connections").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("lag_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("lag_state").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("minimum_links").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("number_of_connections").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("provider_name").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("allows_hosted_connections").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("AllowsHostedConnections")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_device_v2").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AwsDeviceV2")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("connections").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Connections")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("has_logical_redundancy").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("HasLogicalRedundancy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("mac_sec_keys").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("MacSecKeys")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("minimum_links").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("MinimumLinks")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_device").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AwsDevice")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_logical_device_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AwsLogicalDeviceId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("mac_sec_capable").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("MacSecCapable")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("provider_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ProviderName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("LagId")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_device").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("connections_bandwidth").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ConnectionsBandwidth")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("encryption_mode").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("EncryptionMode")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("jumbo_frame_capable").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("JumboFrameCapable")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("number_of_connections").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("NumberOfConnections")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("owner_account").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("OwnerAccount")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("lag_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LagId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("lag_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LagName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("lag_state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LagState")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("location").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Location")).Build(),
 	}
 }
 

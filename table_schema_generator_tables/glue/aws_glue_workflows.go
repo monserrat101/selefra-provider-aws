@@ -2,14 +2,15 @@ package glue
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/glue"
 	"github.com/aws/aws-sdk-go-v2/service/glue/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 )
 
 type TableAwsGlueWorkflowsGenerator struct {
@@ -77,24 +78,29 @@ func (x *TableAwsGlueWorkflowsGenerator) GetExpandClientTask() func(ctx context.
 
 func (x *TableAwsGlueWorkflowsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("last_modified_on").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("max_concurrent_runs").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("created_on").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("default_run_properties").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("graph").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Description")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("max_concurrent_runs").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("MaxConcurrentRuns")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("created_on").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreatedOn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("default_run_properties").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("DefaultRunProperties")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("last_modified_on").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("LastModifiedOn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("last_run").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("LastRun")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Name")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
-				workflowARN := func(cl *aws_client.Client, name string) string {
-					return cl.ARN("glue", "workflow", name)
-				}
+
 				extractor := func() (any, error) {
 					cl := client.(*aws_client.Client)
-					arn := aws.String(workflowARN(cl, aws.ToString(result.(*types.Workflow).Name)))
-					return arn, nil
+					return workflowARN(cl, aws.ToString(result.(*types.Workflow).Name)), nil
 				}
 				extractResultValue, err := extractor()
 				if err != nil {
@@ -103,15 +109,26 @@ func (x *TableAwsGlueWorkflowsGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("blueprint_details").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("last_run").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("blueprint_details").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("BlueprintDetails")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("graph").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Graph")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
 	}
+}
+
+func workflowARN(cl *aws_client.Client, name string) string {
+	return arn.ARN{
+		Partition: cl.Partition,
+		Service:   "glue",
+		Region:    cl.Region,
+		AccountID: cl.AccountID,
+		Resource:  fmt.Sprintf("workflow/%s", name),
+	}.String()
 }
 
 func (x *TableAwsGlueWorkflowsGenerator) GetSubTables() []*schema.Table {

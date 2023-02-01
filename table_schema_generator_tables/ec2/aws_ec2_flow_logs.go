@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -43,7 +43,7 @@ func (x *TableAwsEc2FlowLogsGenerator) GetDataSource() *schema.DataSource {
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config ec2.DescribeFlowLogsInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().EC2
+			svc := c.AwsServices().Ec2
 			for {
 				output, err := svc.DescribeFlowLogs(ctx, &config)
 				if err != nil {
@@ -67,11 +67,16 @@ func (x *TableAwsEc2FlowLogsGenerator) GetExpandClientTask() func(ctx context.Co
 
 func (x *TableAwsEc2FlowLogsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("deliver_cross_account_role").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("destination_options").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("log_destination_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("resource_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreationTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("deliver_logs_error_message").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliverLogsErrorMessage")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("log_destination_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LogDestinationType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("traffic_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TrafficType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -80,11 +85,11 @@ func (x *TableAwsEc2FlowLogsGenerator) GetColumns() []*schema.Column {
 					cl := client.(*aws_client.Client)
 					item := result.(types.FlowLog)
 					a := arn.ARN{
-						Partition: cl.Partition,
-						Service:   "ec2",
-						Region:    cl.Region,
-						AccountID: cl.AccountID,
-						Resource:  "flow_logs/" + aws.ToString(item.FlowLogId),
+						Partition:	cl.Partition,
+						Service:	"ec2",
+						Region:		cl.Region,
+						AccountID:	cl.AccountID,
+						Resource:	"vpc-flow-log/" + aws.ToString(item.FlowLogId),
 					}
 					return a.String(), nil
 				}
@@ -95,23 +100,33 @@ func (x *TableAwsEc2FlowLogsGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("flow_log_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("log_group_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("deliver_logs_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("flow_log_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("traffic_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("deliver_cross_account_role").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliverCrossAccountRole")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("flow_log_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("FlowLogId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("flow_log_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("FlowLogStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("log_destination").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LogDestination")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("log_format").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LogFormat")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("resource_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ResourceId")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("deliver_logs_permission_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("log_format").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("max_aggregation_interval").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("deliver_logs_error_message").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("log_destination").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("deliver_logs_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliverLogsStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("destination_options").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("DestinationOptions")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("log_group_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LogGroupName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("max_aggregation_interval").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("MaxAggregationInterval")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("deliver_logs_permission_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliverLogsPermissionArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 	}
 }
 

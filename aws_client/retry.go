@@ -1,6 +1,7 @@
 package aws_client
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -29,15 +30,15 @@ func (r *retryer) RetryDelay(attempt int, err error) (time.Duration, error) {
 	dur, retErr := r.Retryer.RetryDelay(attempt, err)
 
 	logParams := []interface{}{
-		"duration", dur.String(),
-		"attempt", attempt,
-		"err", err,
+		constants.Duration, dur.String(),
+		constants.Attempt, attempt,
+		constants.Err, err,
 	}
 	if retErr != nil {
-		logParams = append(logParams, "retrier_err", retErr)
-		r.logger.Debug().Err(retErr).Interface("logParams", logParams).Msg("RetryDelay returned err")
+		logParams = append(logParams, constants.Retriererr, retErr)
+		r.logger.Debug().Err(retErr).Interface(constants.LogParams, logParams).Msg(constants.RetryDelayreturnederr)
 	} else {
-		r.logger.Debug().Interface("logParams", logParams).Msg("waiting before retry...")
+		r.logger.Debug().Interface(constants.LogParams, logParams).Msg(constants.Waitingbeforeretry)
 	}
 	return dur, retErr
 }

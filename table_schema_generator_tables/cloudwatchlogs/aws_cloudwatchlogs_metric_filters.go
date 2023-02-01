@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -43,7 +43,7 @@ func (x *TableAwsCloudwatchlogsMetricFiltersGenerator) GetDataSource() *schema.D
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config cloudwatchlogs.DescribeMetricFiltersInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().CloudwatchLogs
+			svc := c.AwsServices().Cloudwatchlogs
 			for {
 				response, err := svc.DescribeMetricFilters(ctx, &config)
 				if err != nil {
@@ -67,10 +67,8 @@ func (x *TableAwsCloudwatchlogsMetricFiltersGenerator) GetExpandClientTask() fun
 
 func (x *TableAwsCloudwatchlogsMetricFiltersGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("log_group_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("metric_transformations").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
@@ -80,11 +78,11 @@ func (x *TableAwsCloudwatchlogsMetricFiltersGenerator) GetColumns() []*schema.Co
 				extractor := func() (any, error) {
 					cl := client.(*aws_client.Client)
 					a := arn.ARN{
-						Partition: cl.Partition,
-						Service:   "cloudwatchlogs",
-						Region:    cl.Region,
-						AccountID: cl.AccountID,
-						Resource:  "metric_filter/" + aws.ToString(result.(types.MetricFilter).FilterName),
+						Partition:	cl.Partition,
+						Service:	"logs",
+						Region:		cl.Region,
+						AccountID:	cl.AccountID,
+						Resource:	"metric_filter/" + aws.ToString(result.(types.MetricFilter).FilterName),
 					}
 					return a.String(), nil
 				}
@@ -95,11 +93,18 @@ func (x *TableAwsCloudwatchlogsMetricFiltersGenerator) GetColumns() []*schema.Co
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_time").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("filter_pattern").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("filter_name").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_time").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("CreationTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("filter_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("FilterName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("filter_pattern").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("FilterPattern")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("log_group_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LogGroupName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("metric_transformations").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("MetricTransformations")).Build(),
 	}
 }
 

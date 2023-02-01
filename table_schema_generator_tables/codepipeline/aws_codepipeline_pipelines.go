@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -42,7 +42,7 @@ func (x *TableAwsCodepipelinePipelinesGenerator) GetDataSource() *schema.DataSou
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().CodePipeline
+			svc := c.AwsServices().Codepipeline
 			config := codepipeline.ListPipelinesInput{}
 			for {
 				response, err := svc.ListPipelines(ctx, &config)
@@ -52,7 +52,7 @@ func (x *TableAwsCodepipelinePipelinesGenerator) GetDataSource() *schema.DataSou
 				}
 				aws_client.SendResults(resultChannel, response.Pipelines, func(result any) (any, error) {
 					c := client.(*aws_client.Client)
-					svc := c.AwsServices().CodePipeline
+					svc := c.AwsServices().Codepipeline
 					item := result.(types.PipelineSummary)
 					response, err := svc.GetPipeline(ctx, &codepipeline.GetPipelineInput{Name: item.Name})
 					if err != nil {
@@ -77,6 +77,16 @@ func (x *TableAwsCodepipelinePipelinesGenerator) GetExpandClientTask() func(ctx 
 
 func (x *TableAwsCodepipelinePipelinesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("metadata").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Metadata")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("pipeline").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Pipeline")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ResultMetadata")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
@@ -105,12 +115,6 @@ func (x *TableAwsCodepipelinePipelinesGenerator) GetColumns() []*schema.Column {
 				}
 			})).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("metadata").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("pipeline").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 	}
 }
 

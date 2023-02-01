@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -32,7 +32,11 @@ func (x *TableAwsCloudfrontCachePoliciesGenerator) GetVersion() uint64 {
 }
 
 func (x *TableAwsCloudfrontCachePoliciesGenerator) GetOptions() *schema.TableOptions {
-	return &schema.TableOptions{}
+	return &schema.TableOptions{
+		PrimaryKeys: []string{
+			"arn",
+		},
+	}
 }
 
 func (x *TableAwsCloudfrontCachePoliciesGenerator) GetDataSource() *schema.DataSource {
@@ -69,6 +73,8 @@ func (x *TableAwsCloudfrontCachePoliciesGenerator) GetExpandClientTask() func(ct
 
 func (x *TableAwsCloudfrontCachePoliciesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CachePolicy.Id")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
 
@@ -92,10 +98,12 @@ func (x *TableAwsCloudfrontCachePoliciesGenerator) GetColumns() []*schema.Column
 					Resource:	strings.Join(ids, "/"),
 				}.String(), nil
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cache_policy").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
-			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cache_policy").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("CachePolicy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Type")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 	}

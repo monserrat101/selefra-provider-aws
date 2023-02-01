@@ -6,9 +6,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 )
 
 type TableAwsIamPasswordPoliciesGenerator struct {
@@ -59,7 +59,7 @@ func (x *TableAwsIamPasswordPoliciesGenerator) GetDataSource() *schema.DataSourc
 
 type PasswordPolicyWrapper struct {
 	types.PasswordPolicy
-	PolicyExists bool
+	PolicyExists	bool
 }
 
 func (x *TableAwsIamPasswordPoliciesGenerator) GetExpandClientTask() func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask) []*schema.ClientTaskContext {
@@ -68,21 +68,14 @@ func (x *TableAwsIamPasswordPoliciesGenerator) GetExpandClientTask() func(ctx co
 
 func (x *TableAwsIamPasswordPoliciesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("require_lowercase_characters").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("require_numbers").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("require_uppercase_characters").ColumnType(schema.ColumnTypeBool).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("allow_users_to_change_password").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("minimum_password_length").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("password_reuse_prevention").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("require_symbols").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("policy_exists").ColumnType(schema.ColumnTypeBool).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("expire_passwords").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("hard_expiry").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("max_password_age").ColumnType(schema.ColumnTypeBigInt).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("password_policy").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("PasswordPolicy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("policy_exists").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("PolicyExists")).Build(),
 	}
 }
 

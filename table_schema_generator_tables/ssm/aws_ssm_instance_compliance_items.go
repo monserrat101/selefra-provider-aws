@@ -2,12 +2,14 @@ package ssm
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -43,7 +45,7 @@ func (x *TableAwsSsmInstanceComplianceItemsGenerator) GetDataSource() *schema.Da
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			instance := task.ParentRawResult.(types.InstanceInformation)
 			cl := client.(*aws_client.Client)
-			svc := cl.AwsServices().SSM
+			svc := cl.AwsServices().Ssm
 
 			input := ssm.ListComplianceItemsInput{
 				ResourceIds: []string{*instance.InstanceId},
@@ -71,8 +73,25 @@ func (x *TableAwsSsmInstanceComplianceItemsGenerator) GetExpandClientTask() func
 
 func (x *TableAwsSsmInstanceComplianceItemsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("resource_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("title").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("execution_summary").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ExecutionSummary")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("resource_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ResourceType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("severity").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Severity")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("compliance_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ComplianceType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("resource_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ResourceId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Status")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("title").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Title")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("instance_arn").ColumnType(schema.ColumnTypeString).
@@ -82,7 +101,13 @@ func (x *TableAwsSsmInstanceComplianceItemsGenerator) GetColumns() []*schema.Col
 				extractor := func() (any, error) {
 					instance := task.ParentRawResult.(types.InstanceInformation)
 					cl := client.(*aws_client.Client)
-					return cl.ARN("ssm", "managed-instance", *instance.InstanceId), nil
+					return arn.ARN{
+						Partition:	cl.Partition,
+						Service:	"ssm",
+						Region:		cl.Region,
+						AccountID:	cl.AccountID,
+						Resource:	fmt.Sprintf("managed-instance/%s", aws.ToString(instance.InstanceId)),
+					}.String(), nil
 				}
 				extractResultValue, err := extractor()
 				if err != nil {
@@ -91,17 +116,8 @@ func (x *TableAwsSsmInstanceComplianceItemsGenerator) GetColumns() []*schema.Col
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("compliance_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("execution_summary").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("severity").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("details").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("resource_id").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("details").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Details")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("aws_ssm_instances_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_ssm_instances.selefra_id").
 			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
 	}

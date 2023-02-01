@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-aws/aws_client"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
@@ -307,7 +307,7 @@ func resolveBucketVersioning(ctx context.Context, client any, resource *WrappedB
 }
 func resolveS3BucketsAttributes(ctx context.Context, client any, resource *WrappedBucket) error {
 	c := client.(*aws_client.Client)
-	mgr := c.AwsServices().S3Manager
+	mgr := c.AwsServices().S3manager
 
 	output, err := mgr.GetBucketRegion(ctx, *resource.Name)
 	if err != nil {

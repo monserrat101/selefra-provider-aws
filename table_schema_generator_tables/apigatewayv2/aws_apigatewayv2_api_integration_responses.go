@@ -2,16 +2,16 @@ package apigatewayv2
 
 import (
 	"context"
-	"strings"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 )
 
 type TableAwsApigatewayv2ApiIntegrationResponsesGenerator struct {
@@ -32,7 +32,12 @@ func (x *TableAwsApigatewayv2ApiIntegrationResponsesGenerator) GetVersion() uint
 }
 
 func (x *TableAwsApigatewayv2ApiIntegrationResponsesGenerator) GetOptions() *schema.TableOptions {
-	return &schema.TableOptions{}
+	return &schema.TableOptions{
+		PrimaryKeys: []string{
+			"account_id",
+			"arn",
+		},
+	}
 }
 
 func (x *TableAwsApigatewayv2ApiIntegrationResponsesGenerator) GetDataSource() *schema.DataSource {
@@ -70,54 +75,54 @@ func (x *TableAwsApigatewayv2ApiIntegrationResponsesGenerator) GetExpandClientTa
 
 func (x *TableAwsApigatewayv2ApiIntegrationResponsesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("response_templates").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ResponseTemplates")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("integration_response_key").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("integration_response_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("response_parameters").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_apigatewayv2_api_integrations_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_apigatewayv2_api_integrations.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
-			Extractor(column_value_extractor.UUID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("api_integration_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_apigatewayv2_api_integrations_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_apigatewayv2_api_integrations.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("integration_response_key").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IntegrationResponseKey")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("content_handling_strategy").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ContentHandlingStrategy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("integration_response_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IntegrationResponseId")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("integration_id").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("integration_id")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
+			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
+				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
 
-				diagnostics := schema.NewDiagnostics()
-
-				idsComputer := func() ([]string, error) {
+				extractor := func() (any, error) {
+					cl := client.(*aws_client.Client)
 					r := result.(types.IntegrationResponse)
 					i := task.ParentRawResult.(types.Integration)
-					api := task.ParentTask.ParentRawResult.(types.Api)
-					return []string{"/apis",
-
-						*api.ApiId, "integrations",
-
-						*i.IntegrationId, "integrationresponses", *r.IntegrationResponseId}, nil
+					api := task.ParentTask.ParentTask.ParentRawResult.(types.Api)
+					return arn.ARN{
+						Partition:	cl.Partition,
+						Service:	string("apigateway"),
+						Region:		cl.Region,
+						AccountID:	"",
+						Resource:	fmt.Sprintf("/apis/%s/integrations/%s/integrationresponses/%s", aws.ToString(api.ApiId), aws.ToString(i.IntegrationId), aws.ToString(r.IntegrationResponseId)),
+					}.String(), nil
 				}
-
-				ids, err := idsComputer()
+				extractResultValue, err := extractor()
 				if err != nil {
-					return nil, diagnostics.AddErrorColumnValueExtractor(task.Table, column, err)
+					return nil, schema.NewDiagnostics().AddErrorColumnValueExtractor(task.Table, column, err)
+				} else {
+					return extractResultValue, nil
 				}
-
-				cl := client.(*aws_client.Client)
-				return arn.ARN{
-					Partition:	cl.Partition,
-					Service:	"apigateway",
-					Region:		cl.Region,
-					AccountID:	"",
-					Resource:	strings.Join(ids, "/"),
-				}.String(), nil
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("content_handling_strategy").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("response_templates").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("template_selection_expression").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("response_parameters").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ResponseParameters")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("template_selection_expression").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TemplateSelectionExpression")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 	}
 }
 

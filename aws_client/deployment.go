@@ -1,6 +1,7 @@
 package aws_client
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"context"
 	"strings"
 
@@ -31,12 +32,12 @@ func NewManyError(errs []error) error {
 
 func listBucketRegion(partition string) string {
 	switch partition {
-	case "aws-cn":
-		return "cn-north-1"
-	case "aws-us-gov":
-		return "us-gov-west-1"
+	case constants.Awscn:
+		return constants.Cnnorth
+	case constants.Awsusgov:
+		return constants.Usgovwest
 	default:
-		return "us-east-1"
+		return constants.Useast
 	}
 }
 

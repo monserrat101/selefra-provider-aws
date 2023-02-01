@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -43,7 +43,7 @@ func (x *TableAwsEc2NatGatewaysGenerator) GetDataSource() *schema.DataSource {
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config ec2.DescribeNatGatewaysInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().EC2
+			svc := c.AwsServices().Ec2
 			for {
 				output, err := svc.DescribeNatGateways(ctx, &config)
 				if err != nil {
@@ -67,14 +67,10 @@ func (x *TableAwsEc2NatGatewaysGenerator) GetExpandClientTask() func(ctx context
 
 func (x *TableAwsEc2NatGatewaysGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("connectivity_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("failure_message").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("nat_gateway_id").ColumnType(schema.ColumnTypeString).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("connectivity_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ConnectivityType")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -87,7 +83,7 @@ func (x *TableAwsEc2NatGatewaysGenerator) GetColumns() []*schema.Column {
 						Service:	"ec2",
 						Region:		cl.Region,
 						AccountID:	cl.AccountID,
-						Resource:	"nat_gateway/" + aws.ToString(item.NatGatewayId),
+						Resource:	"natgateway/" + aws.ToString(item.NatGatewayId),
 					}
 					return a.String(), nil
 				}
@@ -98,16 +94,31 @@ func (x *TableAwsEc2NatGatewaysGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("delete_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("provisioned_bandwidth").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("nat_gateway_addresses").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("NatGatewayAddresses")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("provisioned_bandwidth").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ProvisionedBandwidth")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("State")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("vpc_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VpcId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("delete_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("DeleteTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("failure_message").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("FailureMessage")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("create_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreateTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subnet_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SubnetId")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("vpc_id").ColumnType(schema.ColumnTypeString).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("failure_code").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("nat_gateway_addresses").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("subnet_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("create_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("failure_code").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("FailureCode")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("nat_gateway_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("NatGatewayId")).Build(),
 	}
 }
 

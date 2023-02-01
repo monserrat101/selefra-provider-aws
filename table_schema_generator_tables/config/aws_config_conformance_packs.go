@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/configservice"
 	"github.com/aws/smithy-go"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -44,7 +44,7 @@ func (x *TableAwsConfigConformancePacksGenerator) GetDataSource() *schema.DataSo
 			config := configservice.DescribeConformancePacksInput{}
 			var ae smithy.APIError
 			for {
-				resp, err := c.AwsServices().ConfigService.DescribeConformancePacks(ctx, &config)
+				resp, err := c.AwsServices().Configservice.DescribeConformancePacks(ctx, &config)
 
 				if (c.Region == "af-south-1" || c.Region == "ap-northeast-3") && errors.As(err, &ae) && ae.ErrorCode() == "AccessDeniedException" {
 					return nil
@@ -71,22 +71,32 @@ func (x *TableAwsConfigConformancePacksGenerator) GetExpandClientTask() func(ctx
 
 func (x *TableAwsConfigConformancePacksGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("conformance_pack_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("conformance_pack_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("delivery_s3_bucket").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("delivery_s3_key_prefix").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliveryS3KeyPrefix")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("template_ssm_document_details").ColumnType(schema.ColumnTypeJSON).
 			Extractor(column_value_extractor.StructSelector("TemplateSSMDocumentDetails")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("ConformancePackArn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("created_by").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("delivery_s3_key_prefix").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("last_update_requested_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ConformancePackArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("conformance_pack_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ConformancePackArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("conformance_pack_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ConformancePackName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("created_by").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CreatedBy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("delivery_s3_bucket").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliveryS3Bucket")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("last_update_requested_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("LastUpdateRequestedTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("conformance_pack_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ConformancePackId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("conformance_pack_input_parameters").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ConformancePackInputParameters")).Build(),
 	}
 }
 

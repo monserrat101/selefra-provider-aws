@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -43,7 +43,7 @@ func (x *TableAwsEc2VpcEndpointsGenerator) GetDataSource() *schema.DataSource {
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config ec2.DescribeVpcEndpointsInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().EC2
+			svc := c.AwsServices().Ec2
 			for {
 				output, err := svc.DescribeVpcEndpoints(ctx, &config, func(o *ec2.Options) {
 					o.Region = c.Region
@@ -69,24 +69,47 @@ func (x *TableAwsEc2VpcEndpointsGenerator) GetExpandClientTask() func(ctx contex
 
 func (x *TableAwsEc2VpcEndpointsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("owner_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("OwnerId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("policy_document").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PolicyDocument")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("service_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ServiceName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("vpc_endpoint_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VpcEndpointType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("vpc_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VpcId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("dns_entries").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("DnsEntries")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("groups").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Groups")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("last_error").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("LastError")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("private_dns_enabled").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("PrivateDnsEnabled")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("dns_entries").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("subnet_ids").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("vpc_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("groups").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("requester_managed").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("route_table_ids").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("service_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("ip_address_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("last_error").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("network_interface_ids").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_timestamp").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreationTimestamp")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("requester_managed").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("RequesterManaged")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subnet_ids").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("SubnetIds")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("vpc_endpoint_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VpcEndpointId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("dns_options").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("DnsOptions")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("ip_address_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IpAddressType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("network_interface_ids").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("NetworkInterfaceIds")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("route_table_ids").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("RouteTableIds")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("State")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -99,7 +122,7 @@ func (x *TableAwsEc2VpcEndpointsGenerator) GetColumns() []*schema.Column {
 						Service:	"ec2",
 						Region:		cl.Region,
 						AccountID:	cl.AccountID,
-						Resource:	"vpc_endpoint/" + aws.ToString(item.VpcEndpointId),
+						Resource:	"vpc-endpoint/" + aws.ToString(item.VpcEndpointId),
 					}
 					return a.String(), nil
 				}
@@ -110,13 +133,8 @@ func (x *TableAwsEc2VpcEndpointsGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_timestamp").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("dns_options").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("owner_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("policy_document").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("private_dns_enabled").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("vpc_endpoint_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("vpc_endpoint_type").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 	}
 }
 

@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudtrail"
 	"github.com/aws/aws-sdk-go-v2/service/cloudtrail/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -45,7 +45,6 @@ func (x *TableAwsCloudtrailTrailEventSelectorsGenerator) GetDataSource() *schema
 				return schema.NewDiagnosticsErrorPullTable(task.Table, err)
 
 			}
-			// TODO 2023-1-4 15:31:58 save AdvancedEventSelectors to table  for policy
 			resultChannel <- response.EventSelectors
 			return nil
 		},
@@ -54,7 +53,7 @@ func (x *TableAwsCloudtrailTrailEventSelectorsGenerator) GetDataSource() *schema
 
 type CloudTrailWrapper struct {
 	types.Trail
-	Tags map[string]string
+	Tags	map[string]string
 }
 
 func (x *TableAwsCloudtrailTrailEventSelectorsGenerator) GetExpandClientTask() func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask) []*schema.ClientTaskContext {
@@ -63,20 +62,24 @@ func (x *TableAwsCloudtrailTrailEventSelectorsGenerator) GetExpandClientTask() f
 
 func (x *TableAwsCloudtrailTrailEventSelectorsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
-			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("include_management_events").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("IncludeManagementEvents")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("data_resources").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("exclude_management_event_sources").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("include_management_events").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("read_write_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_cloudtrail_trails_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_cloudtrail_trails.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("trail_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
+			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_cloudtrail_trails_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_cloudtrail_trails.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("exclude_management_event_sources").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("ExcludeManagementEventSources")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("read_write_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ReadWriteType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("data_resources").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("DataResources")).Build(),
 	}
 }
 

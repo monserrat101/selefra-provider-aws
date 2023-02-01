@@ -5,7 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/shield"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -61,17 +61,26 @@ func (x *TableAwsShieldSubscriptionsGenerator) GetExpandClientTask() func(ctx co
 
 func (x *TableAwsShieldSubscriptionsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("subscription_limits").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("auto_renew").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("limits").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("time_commitment_in_seconds").ColumnType(schema.ColumnTypeBigInt).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("auto_renew").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AutoRenew")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("limits").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Limits")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("proactive_engagement_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ProactiveEngagementStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("start_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("StartTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("time_commitment_in_seconds").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("TimeCommitmentInSeconds")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subscription_limits").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("SubscriptionLimits")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("end_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("EndTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subscription_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SubscriptionArn")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("end_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("proactive_engagement_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("start_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("SubscriptionArn")).Build(),
 	}

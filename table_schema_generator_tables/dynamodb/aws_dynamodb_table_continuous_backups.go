@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -38,7 +38,7 @@ func (x *TableAwsDynamodbTableContinuousBackupsGenerator) GetDataSource() *schem
 			par := task.ParentRawResult.(*types.TableDescription)
 
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().DynamoDB
+			svc := c.AwsServices().Dynamodb
 
 			output, err := svc.DescribeContinuousBackups(ctx, &dynamodb.DescribeContinuousBackupsInput{
 				TableName: par.TableName,
@@ -63,18 +63,20 @@ func (x *TableAwsDynamodbTableContinuousBackupsGenerator) GetExpandClientTask() 
 
 func (x *TableAwsDynamodbTableContinuousBackupsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_dynamodb_tables_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_dynamodb_tables.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("table_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("continuous_backups_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("point_in_time_recovery_description").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_dynamodb_tables_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_dynamodb_tables.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
 			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("continuous_backups_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ContinuousBackupsStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("point_in_time_recovery_description").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("PointInTimeRecoveryDescription")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 	}
 }
 
