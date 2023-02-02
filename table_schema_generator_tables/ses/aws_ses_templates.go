@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sesv2"
 	"github.com/aws/aws-sdk-go-v2/service/sesv2/types"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-aws/aws_client"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
@@ -44,7 +44,7 @@ func (x *TableAwsSesTemplatesGenerator) GetDataSource() *schema.DataSource {
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().SES
+			svc := c.AwsServices().Sesv2
 
 			listInput := new(sesv2.ListEmailTemplatesInput)
 			for {
@@ -55,7 +55,7 @@ func (x *TableAwsSesTemplatesGenerator) GetDataSource() *schema.DataSource {
 				}
 				aws_client.SendResults(resultChannel, output.TemplatesMetadata, func(result any) (any, error) {
 					c := client.(*aws_client.Client)
-					svc := c.AwsServices().SES
+					svc := c.AwsServices().Sesv2
 					templateMeta := result.(types.EmailTemplateMetadata)
 
 					getOutput, err := svc.GetEmailTemplate(ctx, &sesv2.GetEmailTemplateInput{TemplateName: templateMeta.TemplateName})

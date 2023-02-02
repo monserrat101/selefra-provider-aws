@@ -6,7 +6,7 @@ import (
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -36,7 +36,7 @@ func (x *TableAwsElbv2TargetGroupTargetHealthDescriptionsGenerator) GetDataSourc
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			cl := client.(*aws_client.Client)
-			svc := cl.AwsServices().ELBv2
+			svc := cl.AwsServices().Elasticloadbalancingv2
 			tg := task.ParentRawResult.(types.TargetGroup)
 			response, err := svc.DescribeTargetHealth(ctx, &elbv2.DescribeTargetHealthInput{
 				TargetGroupArn: tg.TargetGroupArn,
@@ -62,13 +62,16 @@ func (x *TableAwsElbv2TargetGroupTargetHealthDescriptionsGenerator) GetColumns()
 	return []*schema.Column{
 		table_schema_generator.NewColumnBuilder().ColumnName("target_group_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("health_check_port").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("target").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("target_health").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
 			Extractor(column_value_extractor.UUID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("aws_elbv2_target_groups_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_elbv2_target_groups.selefra_id").
 			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("health_check_port").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("HealthCheckPort")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("target").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Target")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("target_health").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("TargetHealth")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).

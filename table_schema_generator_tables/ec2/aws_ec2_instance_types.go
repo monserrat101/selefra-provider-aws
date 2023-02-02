@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -43,7 +43,7 @@ func (x *TableAwsEc2InstanceTypesGenerator) GetDataSource() *schema.DataSource {
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config ec2.DescribeInstanceTypesInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().EC2
+			svc := c.AwsServices().Ec2
 
 			for {
 				response, err := svc.DescribeInstanceTypes(ctx, &config, func(options *ec2.Options) {
@@ -71,21 +71,16 @@ func (x *TableAwsEc2InstanceTypesGenerator) GetExpandClientTask() func(ctx conte
 
 func (x *TableAwsEc2InstanceTypesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("gpu_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("instance_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("network_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("ebs_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("free_tier_eligible").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("placement_group_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("current_generation").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("hibernation_supported").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("supported_root_device_types").ColumnType(schema.ColumnTypeStringArray).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("burstable_performance_supported").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("BurstablePerformanceSupported")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("hypervisor").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Hypervisor")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("memory_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("MemoryInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("network_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("NetworkInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("supported_boot_modes").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("SupportedBootModes")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -109,21 +104,50 @@ func (x *TableAwsEc2InstanceTypesGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("inference_accelerator_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("instance_storage_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("instance_storage_supported").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("processor_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("supported_usage_classes").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("bare_metal").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("burstable_performance_supported").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("dedicated_hosts_supported").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("fpga_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("supported_virtualization_types").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("v_cpu_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("auto_recovery_supported").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("memory_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("supported_boot_modes").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("hypervisor").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("current_generation").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("CurrentGeneration")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("dedicated_hosts_supported").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("DedicatedHostsSupported")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("auto_recovery_supported").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("AutoRecoverySupported")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("fpga_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("FpgaInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("gpu_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("GpuInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("instance_storage_supported").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("InstanceStorageSupported")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("instance_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("InstanceType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("v_cpu_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("VCpuInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("placement_group_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("PlacementGroupInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("processor_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ProcessorInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("inference_accelerator_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("InferenceAcceleratorInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("instance_storage_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("InstanceStorageInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("supported_virtualization_types").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("SupportedVirtualizationTypes")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("free_tier_eligible").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("FreeTierEligible")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("hibernation_supported").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("HibernationSupported")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("supported_root_device_types").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("SupportedRootDeviceTypes")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("bare_metal").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("BareMetal")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("ebs_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("EbsInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("supported_usage_classes").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("SupportedUsageClasses")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 	}
 }
 

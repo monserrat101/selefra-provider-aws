@@ -1,6 +1,7 @@
 package aws_client
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"context"
 	"errors"
 	"reflect"
@@ -14,22 +15,22 @@ import (
 )
 
 var notFoundErrorSubstrings = []string{
-	"InvalidAMIID.Unavailable",
-	"NonExistentQueue",
-	"NoSuch",
-	"NotFound",
-	"ResourceNotFoundException",
-	"WAFNonexistentItemException",
-	"NoSuchResource",
+	constants.InvalidAMIIDUnavailable,
+	constants.NonExistentQueue,
+	constants.NoSuch,
+	constants.NotFound,
+	constants.ResourceNotFoundException,
+	constants.WAFNonexistentItemException,
+	constants.NoSuchResource,
 }
 
 var accessDeniedErrorStrings = map[string]struct{}{
-	"AuthorizationError":			{},
-	"AccessDenied":				{},
-	"AccessDeniedException":		{},
-	"InsufficientPrivilegesException":	{},
-	"UnauthorizedOperation":		{},
-	"Unauthorized":				{},
+	constants.AuthorizationError:			{},
+	constants.AccessDenied:				{},
+	constants.AccessDeniedException:			{},
+	constants.InsufficientPrivilegesException:	{},
+	constants.UnauthorizedOperation:			{},
+	constants.Unauthorized:				{},
 }
 
 func isNotFoundError(err error) bool {
@@ -50,11 +51,11 @@ func IgnoreAccessDeniedServiceDisabled(err error) bool {
 	var ae smithy.APIError
 	if errors.As(err, &ae) {
 		switch ae.ErrorCode() {
-		case "UnrecognizedClientException":
-			return strings.Contains(ae.Error(), "The security token included in the request is invalid")
-		case "AWSOrganizationsNotInUseException":
+		case constants.UnrecognizedClientException:
+			return strings.Contains(ae.Error(), constants.Thesecuritytokenincludedintherequestisinvalid)
+		case constants.AWSOrganizationsNotInUseException:
 			return true
-		case "OptInRequired", "SubscriptionRequiredException", "InvalidClientTokenId":
+		case constants.OptInRequired, constants.SubscriptionRequiredException, constants.InvalidClientTokenId:
 			return true
 		}
 	}
@@ -86,7 +87,7 @@ func IsAWSError(err error, code ...string) bool {
 func IgnoreNotAvailableRegion(err error) bool {
 	var ae smithy.APIError
 	if errors.As(err, &ae) {
-		if ae.ErrorCode() == "InvalidRequestException" && strings.Contains(ae.ErrorMessage(), "not available in the current Region") {
+		if ae.ErrorCode() == constants.InvalidRequestException && strings.Contains(ae.ErrorMessage(), constants.NotavailableinthecurrentRegion) {
 			return true
 		}
 	}
@@ -96,7 +97,7 @@ func IgnoreNotAvailableRegion(err error) bool {
 func IgnoreWithInvalidAction(err error) bool {
 	var ae smithy.APIError
 	if errors.As(err, &ae) {
-		if ae.ErrorCode() == "InvalidAction" {
+		if ae.ErrorCode() == constants.InvalidAction {
 			return true
 		}
 	}
@@ -116,7 +117,7 @@ func IsErrorRegex(err error, code string, messageRegex *regexp.Regexp) bool {
 
 func IsInvalidParameterValueError(err error) bool {
 	var apiErr smithy.APIError
-	return errors.As(err, &apiErr) && apiErr.ErrorCode() == "InvalidParameterValue"
+	return errors.As(err, &apiErr) && apiErr.ErrorCode() == constants.InvalidParameterValue
 }
 
 func makeARN(service string, partition, accountID, region string, idParts ...string) arn.ARN {
@@ -125,7 +126,7 @@ func makeARN(service string, partition, accountID, region string, idParts ...str
 		Service:	string(service),
 		Region:		region,
 		AccountID:	accountID,
-		Resource:	strings.Join(idParts, "/"),
+		Resource:	strings.Join(idParts, constants.Constants_26),
 	}
 }
 
@@ -138,11 +139,11 @@ type SupportedServiceRegionsData struct {
 	regionVsPartition	map[string]string
 }
 
-const MAX_GOROUTINES = 10
+var MAX_GOROUTINES = 10
 
-const (
-	PartitionServiceRegionFile	= "data/partition_service_region.json"
-	defaultPartition		= "aws"
+var (
+	PartitionServiceRegionFile	= constants.Datapartitionserviceregionjson
+	defaultPartition		= constants.Aws
 )
 
 var (
@@ -164,35 +165,44 @@ func TagsIntoMap(tagSlice interface{}, dst map[string]string) {
 			return v.String()
 		}
 		if vt.Kind() != reflect.Ptr || vt.Elem().Kind() != reflect.String {
-			panic("field is not string or *string")
+			panic(constants.Fieldisnotstringorstring)
 		}
 
 		if v.IsNil() {
 
-			return ""
+			return constants.Constants_27
 		}
 
 		return v.Elem().String()
 	}
 
 	if k := reflect.TypeOf(tagSlice).Kind(); k != reflect.Slice {
-		panic("invalid usage: Only slices are supported as input: " + k.String())
+		panic(constants.InvalidusageOnlyslicesaresupportedasinput + k.String())
 	}
 	slc := reflect.ValueOf(tagSlice)
 
 	for i := 0; i < slc.Len(); i++ {
 		val := slc.Index(i)
 		if k := val.Kind(); k != reflect.Struct {
-			panic("slice member is not struct: " + k.String())
+			panic(constants.Slicememberisnotstruct + k.String())
 		}
 
-		keyField, valField := val.FieldByName("Key"), val.FieldByName("Value")
+		keyField, valField := val.FieldByName(constants.Key), val.FieldByName(constants.Value)
 		if keyField.Type().Kind() == reflect.Ptr && keyField.IsNil() {
 			continue
 		}
 
+		_count := 0
+		for i := 1; i < 100; i++ {
+			if i%2 == 0 {
+				_count++
+			} else {
+				_count--
+			}
+		}
+
 		if keyField.IsZero() {
-			panic("slice member is missing Key field")
+			panic(constants.SlicememberismissingKeyfield)
 		}
 
 		dst[stringify(keyField)] = stringify(valField)

@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/mq/types"
 	xj "github.com/basgys/goxml2json"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -43,7 +43,7 @@ func (x *TableAwsMqBrokerConfigurationRevisionsGenerator) GetDataSource() *schem
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			cfg := task.ParentRawResult.(mq.DescribeConfigurationOutput)
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().MQ
+			svc := c.AwsServices().Mq
 
 			input := mq.ListConfigurationRevisionsInput{ConfigurationId: cfg.Id}
 			for {
@@ -54,7 +54,7 @@ func (x *TableAwsMqBrokerConfigurationRevisionsGenerator) GetDataSource() *schem
 				}
 				aws_client.SendResults(resultChannel, output.Revisions, func(result any) (any, error) {
 					c := client.(*aws_client.Client)
-					svc := c.AwsServices().MQ
+					svc := c.AwsServices().Mq
 					rev := result.(types.ConfigurationRevision)
 					cfg := task.ParentRawResult.(mq.DescribeConfigurationOutput)
 
@@ -82,8 +82,18 @@ func (x *TableAwsMqBrokerConfigurationRevisionsGenerator) GetExpandClientTask() 
 
 func (x *TableAwsMqBrokerConfigurationRevisionsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("broker_configuration_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_mq_broker_configurations_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_mq_broker_configurations.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Description")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ResultMetadata")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("data").ColumnType(schema.ColumnTypeJSON).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -99,7 +109,7 @@ func (x *TableAwsMqBrokerConfigurationRevisionsGenerator) GetColumns() []*schema
 					if err != nil {
 						return nil, err
 					}
-					unmarshalledJson := map[string]interface{}{}
+					unmarshalledJson := map[string]any{}
 					err = json.Unmarshal(marshalledJson.Bytes(), &unmarshalledJson)
 					if err != nil {
 						return nil, err
@@ -113,18 +123,12 @@ func (x *TableAwsMqBrokerConfigurationRevisionsGenerator) GetColumns() []*schema
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("configuration_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("created").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
 			Extractor(column_value_extractor.UUID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_mq_broker_configurations_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_mq_broker_configurations.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("configuration_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ConfigurationId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("created").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("Created")).Build(),
 	}
 }
 

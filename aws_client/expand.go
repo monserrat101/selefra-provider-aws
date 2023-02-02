@@ -1,6 +1,7 @@
 package aws_client
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"github.com/aws/aws-sdk-go-v2/service/wafv2/types"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-utils/pkg/if_expression"
@@ -12,12 +13,12 @@ import (
 )
 
 var AllNamespaces = []string{
-	"comprehend", "rds", "sagemaker", "appstream", "elasticmapreduce", "dynamodb", "lambda", "ecs", "cassandra", "ec2", "neptune", "kafka", "custom-resource", "elasticache",
+	constants.Comprehend, constants.Rds, constants.Sagemaker, constants.Appstream, constants.Elasticmapreduce, constants.Dynamodb, constants.Lambda, constants.Ecs, constants.Cassandra, constants.Ec, constants.Neptune, constants.Kafka, constants.Customresource, constants.Elasticache,
 }
 
 func getRegion(regionalMap map[string]*AwsServices) string {
 	if len(regionalMap) == 0 {
-		return ""
+		return constants.Constants_18
 	}
 	regions := make([]string, 0)
 	for i := range regionalMap {
@@ -107,7 +108,7 @@ func isSupportedServiceForRegion(service string, region string) bool {
 		return false
 	}
 
-	prt := if_expression.ReturnString(serviceRegionDataTransport.region[region] != "", serviceRegionDataTransport.region[region], "aws")
+	prt := if_expression.ReturnString(serviceRegionDataTransport.region[region] != constants.Constants_19, serviceRegionDataTransport.region[region], constants.Aws)
 
 	currentPartition := serviceRegionDataTransport.Partitions[prt]
 

@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sagemaker"
 	"github.com/aws/aws-sdk-go-v2/service/sagemaker/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -41,7 +41,7 @@ func (x *TableAwsSagemakerEndpointConfigurationsGenerator) GetDataSource() *sche
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().SageMaker
+			svc := c.AwsServices().Sagemaker
 			config := sagemaker.ListEndpointConfigsInput{}
 			for {
 				response, err := svc.ListEndpointConfigs(ctx, &config)
@@ -51,7 +51,7 @@ func (x *TableAwsSagemakerEndpointConfigurationsGenerator) GetDataSource() *sche
 				}
 				aws_client.SendResults(resultChannel, response.EndpointConfigs, func(result any) (any, error) {
 					c := client.(*aws_client.Client)
-					svc := c.AwsServices().SageMaker
+					svc := c.AwsServices().Sagemaker
 					n := result.(types.EndpointConfigSummary)
 
 					response, err := svc.DescribeEndpointConfig(ctx, &sagemaker.DescribeEndpointConfigInput{
@@ -79,23 +79,35 @@ func (x *TableAwsSagemakerEndpointConfigurationsGenerator) GetExpandClientTask()
 
 func (x *TableAwsSagemakerEndpointConfigurationsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("async_inference_config").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("data_capture_config").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("kms_key_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("data_capture_config").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("DataCaptureConfig")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ResultMetadata")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("endpoint_config_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("EndpointConfigArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("endpoint_config_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("EndpointConfigName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("async_inference_config").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("AsyncInferenceConfig")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("kms_key_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("KmsKeyId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("EndpointConfigArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("explainer_config").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ExplainerConfig")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreationTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("production_variants").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ProductionVariants")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("shadow_production_variants").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ShadowProductionVariants")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Description("`The tags associated with the model.`").Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("explainer_config").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("EndpointConfigArn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("endpoint_config_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("production_variants").ColumnType(schema.ColumnTypeJSON).Build(),
 	}
 }
 

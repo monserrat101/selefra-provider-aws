@@ -7,7 +7,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/resourcegroups"
 	"github.com/aws/aws-sdk-go-v2/service/resourcegroups/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -42,7 +43,7 @@ func (x *TableAwsResourcegroupsResourceGroupsGenerator) GetDataSource() *schema.
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config resourcegroups.ListGroupsInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().ResourceGroups
+			svc := c.AwsServices().Resourcegroups
 			for {
 				output, err := svc.ListGroups(ctx, &config)
 				if err != nil {
@@ -52,7 +53,7 @@ func (x *TableAwsResourcegroupsResourceGroupsGenerator) GetDataSource() *schema.
 				aws_client.SendResults(resultChannel, output.GroupIdentifiers, func(result any) (any, error) {
 					c := client.(*aws_client.Client)
 					group := result.(types.GroupIdentifier)
-					svc := c.AwsServices().ResourceGroups
+					svc := c.AwsServices().Resourcegroups
 					groupResponse, err := svc.GetGroup(ctx, &resourcegroups.GetGroupInput{
 						Group: group.GroupArn,
 					})
@@ -94,20 +95,19 @@ func (x *TableAwsResourcegroupsResourceGroupsGenerator) GetExpandClientTask() fu
 
 func (x *TableAwsResourcegroupsResourceGroupsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("query").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("type").ColumnType(schema.ColumnTypeString).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("group_arn").ColumnType(schema.ColumnTypeString).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("GroupArn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("group").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Group")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("resource_query").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ResourceQuery")).Build(),
 	}
 }
 

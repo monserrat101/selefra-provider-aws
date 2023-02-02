@@ -5,7 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/backup"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -31,6 +31,7 @@ func (x *TableAwsBackupGlobalSettingsGenerator) GetOptions() *schema.TableOption
 	return &schema.TableOptions{
 		PrimaryKeys: []string{
 			"account_id",
+			"region",
 		},
 	}
 }
@@ -44,14 +45,6 @@ func (x *TableAwsBackupGlobalSettingsGenerator) GetDataSource() *schema.DataSour
 
 			output, err := svc.DescribeGlobalSettings(ctx, &input)
 			if err != nil {
-				if aws_client.IgnoreAccessDeniedServiceDisabled(err) || aws_client.IsAWSError(err, "ERROR_9601") {
-
-					return nil
-				}
-				if aws_client.IsAWSError(err, "ERROR_2502") {
-
-					return nil
-				}
 				return schema.NewDiagnosticsErrorPullTable(task.Table, err)
 
 			}
@@ -67,13 +60,18 @@ func (x *TableAwsBackupGlobalSettingsGenerator) GetExpandClientTask() func(ctx c
 
 func (x *TableAwsBackupGlobalSettingsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ResultMetadata")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("global_settings").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("last_update_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("global_settings").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("GlobalSettings")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("last_update_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("LastUpdateTime")).Build(),
 	}
 }
 

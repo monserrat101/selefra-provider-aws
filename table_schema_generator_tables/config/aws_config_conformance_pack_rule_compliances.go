@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/configservice"
 	"github.com/aws/aws-sdk-go-v2/service/configservice/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -38,7 +38,7 @@ func (x *TableAwsConfigConformancePackRuleCompliancesGenerator) GetDataSource() 
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			conformancePackDetail := task.ParentRawResult.(types.ConformancePackDetail)
 			c := client.(*aws_client.Client)
-			cs := c.AwsServices().ConfigService
+			cs := c.AwsServices().Configservice
 			params := configservice.DescribeConformancePackComplianceInput{
 				ConformancePackName: conformancePackDetail.ConformancePackName,
 			}
@@ -110,23 +110,30 @@ func (x *TableAwsConfigConformancePackRuleCompliancesGenerator) GetExpandClientT
 
 func (x *TableAwsConfigConformancePackRuleCompliancesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("annotation").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
-			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("config_rule_invoked_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("ConfigRuleInvokedTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("evaluation_result_identifier").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("EvaluationResultIdentifier")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("aws_config_conformance_packs_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_config_conformance_packs.selefra_id").
 			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("conformance_pack_arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("config_rule_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("controls").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("result_recorded_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("compliance_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ComplianceType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("config_rule_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ConfigRuleName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("controls").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("Controls")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("compliance_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("config_rule_invoked_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("evaluation_result_identifier").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("conformance_pack_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
+			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("result_recorded_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("ResultRecordedTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("annotation").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Annotation")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 	}
 }
 

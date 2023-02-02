@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -41,7 +41,7 @@ func (x *TableAwsRdsSubnetGroupsGenerator) GetDataSource() *schema.DataSource {
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config rds.DescribeDBSubnetGroupsInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().RDS
+			svc := c.AwsServices().Rds
 			for {
 				response, err := svc.DescribeDBSubnetGroups(ctx, &config)
 				if err != nil {
@@ -65,22 +65,28 @@ func (x *TableAwsRdsSubnetGroupsGenerator) GetExpandClientTask() func(ctx contex
 
 func (x *TableAwsRdsSubnetGroupsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+		table_schema_generator.NewColumnBuilder().ColumnName("subnet_group_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SubnetGroupStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("db_subnet_group_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("DBSubnetGroupArn")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("db_subnet_group_description").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("DBSubnetGroupDescription")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("db_subnet_group_name").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("DBSubnetGroupName")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("subnet_group_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("supported_network_types").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("subnets").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("vpc_id").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subnets").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Subnets")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("supported_network_types").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("SupportedNetworkTypes")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("vpc_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VpcId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DBSubnetGroupArn")).Build(),
 	}
 }
 

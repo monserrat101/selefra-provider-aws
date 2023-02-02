@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/elasticache"
 	"github.com/aws/aws-sdk-go-v2/service/elasticache/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -41,7 +41,7 @@ func (x *TableAwsElasticacheServiceUpdatesGenerator) GetOptions() *schema.TableO
 func (x *TableAwsElasticacheServiceUpdatesGenerator) GetDataSource() *schema.DataSource {
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
-			paginator := elasticache.NewDescribeServiceUpdatesPaginator(client.(*aws_client.Client).AwsServices().ElastiCache, nil)
+			paginator := elasticache.NewDescribeServiceUpdatesPaginator(client.(*aws_client.Client).AwsServices().Elasticache, nil)
 			for paginator.HasMorePages() {
 				v, err := paginator.NextPage(ctx)
 				if err != nil {
@@ -61,10 +61,28 @@ func (x *TableAwsElasticacheServiceUpdatesGenerator) GetExpandClientTask() func(
 
 func (x *TableAwsElasticacheServiceUpdatesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("auto_update_after_recommended_apply_by_date").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("service_update_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("service_update_release_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("service_update_type").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("auto_update_after_recommended_apply_by_date").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("AutoUpdateAfterRecommendedApplyByDate")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("engine_version").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("EngineVersion")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("estimated_update_time").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("EstimatedUpdateTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("service_update_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ServiceUpdateType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("service_update_end_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("ServiceUpdateEndDate")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("service_update_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ServiceUpdateName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("service_update_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ServiceUpdateStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("engine").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Engine")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("service_update_release_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("ServiceUpdateReleaseDate")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -88,20 +106,14 @@ func (x *TableAwsElasticacheServiceUpdatesGenerator) GetColumns() []*schema.Colu
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("engine").ColumnType(schema.ColumnTypeString).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("service_update_end_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("service_update_severity").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("engine_version").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("service_update_description").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("service_update_recommended_apply_by_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("service_update_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("estimated_update_time").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("service_update_description").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ServiceUpdateDescription")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("service_update_recommended_apply_by_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("ServiceUpdateRecommendedApplyByDate")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("service_update_severity").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ServiceUpdateSeverity")).Build(),
 	}
 }
 

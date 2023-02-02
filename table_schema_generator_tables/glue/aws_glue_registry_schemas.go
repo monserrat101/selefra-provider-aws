@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/glue"
 	"github.com/aws/aws-sdk-go-v2/service/glue/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -30,7 +30,11 @@ func (x *TableAwsGlueRegistrySchemasGenerator) GetVersion() uint64 {
 }
 
 func (x *TableAwsGlueRegistrySchemasGenerator) GetOptions() *schema.TableOptions {
-	return &schema.TableOptions{}
+	return &schema.TableOptions{
+		PrimaryKeys: []string{
+			"arn",
+		},
+	}
 }
 
 func (x *TableAwsGlueRegistrySchemasGenerator) GetDataSource() *schema.DataSource {
@@ -40,11 +44,12 @@ func (x *TableAwsGlueRegistrySchemasGenerator) GetDataSource() *schema.DataSourc
 			cl := client.(*aws_client.Client)
 			svc := cl.AwsServices().Glue
 			input := glue.ListSchemasInput{
-				RegistryId: &types.RegistryId{RegistryArn: r.RegistryArn},
-				MaxResults: aws.Int32(100),
+				RegistryId:	&types.RegistryId{RegistryArn: r.RegistryArn},
+				MaxResults:	aws.Int32(100),
 			}
-			for {
-				result, err := svc.ListSchemas(ctx, &input)
+			paginator := glue.NewListSchemasPaginator(svc, &input)
+			for paginator.HasMorePages() {
+				result, err := paginator.NextPage(ctx)
 				if err != nil {
 					return schema.NewDiagnosticsErrorPullTable(task.Table, err)
 
@@ -61,10 +66,6 @@ func (x *TableAwsGlueRegistrySchemasGenerator) GetDataSource() *schema.DataSourc
 					return s, nil
 
 				})
-				if aws.ToString(result.NextToken) == "" {
-					break
-				}
-				input.NextToken = result.NextToken
 			}
 			return nil
 		},
@@ -77,30 +78,45 @@ func (x *TableAwsGlueRegistrySchemasGenerator) GetExpandClientTask() func(ctx co
 
 func (x *TableAwsGlueRegistrySchemasGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("latest_schema_version").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("LatestSchemaVersion")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("schema_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SchemaStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("data_format").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DataFormat")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("registry_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RegistryName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("schema_checkpoint").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("SchemaCheckpoint")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("SchemaArn")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("next_schema_version").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
-			Extractor(column_value_extractor.UUID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("created_time").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("registry_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("registry_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("schema_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("updated_time").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("data_format").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("schema_checkpoint").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("schema_status").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("compatibility").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Compatibility")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("registry_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RegistryArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("schema_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SchemaArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ResultMetadata")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("compatibility").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("latest_schema_version").ColumnType(schema.ColumnTypeBigInt).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("aws_glue_registries_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_glue_registries.selefra_id").
 			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("created_time").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CreatedTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Description")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("next_schema_version").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("NextSchemaVersion")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("schema_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SchemaName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("updated_time").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("UpdatedTime")).Build(),
 	}
 }
 

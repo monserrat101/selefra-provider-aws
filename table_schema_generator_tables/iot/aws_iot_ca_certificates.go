@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iot"
 	"github.com/aws/aws-sdk-go-v2/service/iot/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -45,7 +45,7 @@ func (x *TableAwsIotCaCertificatesGenerator) GetDataSource() *schema.DataSource 
 			}
 			c := client.(*aws_client.Client)
 
-			svc := c.AwsServices().IOT
+			svc := c.AwsServices().Iot
 			for {
 				response, err := svc.ListCACertificates(ctx, &input)
 				if err != nil {
@@ -80,6 +80,30 @@ func (x *TableAwsIotCaCertificatesGenerator) GetExpandClientTask() func(ctx cont
 
 func (x *TableAwsIotCaCertificatesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("auto_registration_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AutoRegistrationStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("certificate_pem").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CertificatePem")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("customer_version").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("CustomerVersion")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CertificateArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("certificate_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CertificateArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("certificate_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CertificateId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("generation_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("GenerationId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("last_modified_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("LastModifiedDate")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("owned_by").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("OwnedBy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("validity").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Validity")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("certificates").ColumnType(schema.ColumnTypeStringArray).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -87,10 +111,10 @@ func (x *TableAwsIotCaCertificatesGenerator) GetColumns() []*schema.Column {
 				extractor := func() (any, error) {
 					i := result.(*types.CACertificateDescription)
 					cl := client.(*aws_client.Client)
-					svc := cl.AwsServices().IOT
+					svc := cl.AwsServices().Iot
 					input := iot.ListCertificatesByCAInput{
-						CaCertificateId: i.CertificateId,
-						PageSize:        aws.Int32(250),
+						CaCertificateId:	i.CertificateId,
+						PageSize:		aws.Int32(250),
 					}
 
 					var certs []string
@@ -118,25 +142,14 @@ func (x *TableAwsIotCaCertificatesGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("certificate_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("customer_version").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("certificate_mode").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("generation_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("last_modified_date").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("CertificateArn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("auto_registration_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("certificate_pem").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("owned_by").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("validity").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("certificate_mode").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("CertificateMode")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_date").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreationDate")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Status")).Build(),
 	}
 }
 

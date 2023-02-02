@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -41,7 +41,7 @@ func (x *TableAwsElbv2TargetGroupsGenerator) GetDataSource() *schema.DataSource 
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config elbv2.DescribeTargetGroupsInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().ELBv2
+			svc := c.AwsServices().Elasticloadbalancingv2
 			for {
 				response, err := svc.DescribeTargetGroups(ctx, &config)
 				if err != nil {
@@ -65,32 +65,51 @@ func (x *TableAwsElbv2TargetGroupsGenerator) GetExpandClientTask() func(ctx cont
 
 func (x *TableAwsElbv2TargetGroupsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("health_check_interval_seconds").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("health_check_port").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("ip_address_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("protocol_version").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("unhealthy_threshold_count").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("vpc_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("health_check_timeout_seconds").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("healthy_threshold_count").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("protocol").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("target_group_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("health_check_enabled").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("matcher").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("health_check_port").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("HealthCheckPort")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("health_check_protocol").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("HealthCheckProtocol")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("healthy_threshold_count").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("HealthyThresholdCount")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("matcher").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Matcher")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("health_check_path").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("HealthCheckPath")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("target_group_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TargetGroupName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("vpc_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VpcId")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("health_check_enabled").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("HealthCheckEnabled")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("health_check_timeout_seconds").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("HealthCheckTimeoutSeconds")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("protocol").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Protocol")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("target_group_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TargetGroupArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("target_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TargetType")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("TargetGroupArn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("health_check_path").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("health_check_protocol").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("load_balancer_arns").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("port").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("target_type").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("health_check_interval_seconds").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("HealthCheckIntervalSeconds")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("ip_address_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IpAddressType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("load_balancer_arns").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("LoadBalancerArns")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("port").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("Port")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("protocol_version").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ProtocolVersion")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("unhealthy_threshold_count").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("UnhealthyThresholdCount")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
 	}
 }
 

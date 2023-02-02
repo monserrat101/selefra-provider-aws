@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -40,7 +40,7 @@ func (x *TableAwsDynamodbTablesGenerator) GetDataSource() *schema.DataSource {
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().DynamoDB
+			svc := c.AwsServices().Dynamodb
 
 			config := dynamodb.ListTablesInput{}
 			for {
@@ -51,7 +51,7 @@ func (x *TableAwsDynamodbTablesGenerator) GetDataSource() *schema.DataSource {
 				}
 				aws_client.SendResults(resultChannel, output.TableNames, func(result any) (any, error) {
 					c := client.(*aws_client.Client)
-					svc := c.AwsServices().DynamoDB
+					svc := c.AwsServices().Dynamodb
 
 					tableName := result.(string)
 
@@ -79,37 +79,58 @@ func (x *TableAwsDynamodbTablesGenerator) GetExpandClientTask() func(ctx context
 
 func (x *TableAwsDynamodbTablesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("global_secondary_indexes").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("global_table_version").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("latest_stream_label").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("sse_description").ColumnType(schema.ColumnTypeJSON).
-			Extractor(column_value_extractor.StructSelector("SSEDescription")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("table_size_bytes").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("TableSizeBytes")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("key_schema").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("KeySchema")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("latest_stream_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LatestStreamArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("creation_date_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreationDateTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("item_count").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("ItemCount")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("TableArn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("archival_summary").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("billing_mode_summary").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("table_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("latest_stream_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("local_secondary_indexes").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("table_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("item_count").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("table_size_bytes").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("provisioned_throughput").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("replicas").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("restore_summary").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("stream_specification").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("attribute_definitions").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("AttributeDefinitions")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("local_secondary_indexes").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("LocalSecondaryIndexes")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("attribute_definitions").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("creation_date_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("key_schema").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("table_class_summary").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("table_name").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("table_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TableId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("global_secondary_indexes").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("GlobalSecondaryIndexes")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("global_table_version").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("GlobalTableVersion")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("provisioned_throughput").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ProvisionedThroughput")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("table_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TableArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("table_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TableStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("archival_summary").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("restore_summary").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("RestoreSummary")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TableArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("billing_mode_summary").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("BillingModeSummary")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("latest_stream_label").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LatestStreamLabel")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("sse_description").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("SSEDescription")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("stream_specification").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("StreamSpecification")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("replicas").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Replicas")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("table_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TableName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("table_class_summary").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("TableClassSummary")).Build(),
 	}
 }
 

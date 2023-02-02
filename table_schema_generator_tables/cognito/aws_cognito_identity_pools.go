@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentity"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentity/types"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -45,7 +45,7 @@ func (x *TableAwsCognitoIdentityPoolsGenerator) GetDataSource() *schema.DataSour
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().CognitoIdentityPools
+			svc := c.AwsServices().Cognitoidentity
 			params := cognitoidentity.ListIdentityPoolsInput{
 
 				MaxResults: 60,
@@ -58,7 +58,7 @@ func (x *TableAwsCognitoIdentityPoolsGenerator) GetDataSource() *schema.DataSour
 				}
 				aws_client.SendResults(resultChannel, out.IdentityPools, func(result any) (any, error) {
 					c := client.(*aws_client.Client)
-					svc := c.AwsServices().CognitoIdentityPools
+					svc := c.AwsServices().Cognitoidentity
 					item := result.(types.IdentityPoolShortDescription)
 
 					ipo, err := svc.DescribeIdentityPool(ctx, &cognitoidentity.DescribeIdentityPoolInput{IdentityPoolId: item.IdentityPoolId})
@@ -84,17 +84,8 @@ func (x *TableAwsCognitoIdentityPoolsGenerator) GetExpandClientTask() func(ctx c
 
 func (x *TableAwsCognitoIdentityPoolsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("IdentityPoolId")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("allow_classic_flow").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cognito_identity_providers").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("developer_provider_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("allow_unauthenticated_identities").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("identity_pool_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IdentityPoolName")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
 
@@ -118,15 +109,34 @@ func (x *TableAwsCognitoIdentityPoolsGenerator) GetColumns() []*schema.Column {
 					Resource:	strings.Join(ids, "/"),
 				}.String(), nil
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("identity_pool_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("identity_pool_tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("open_id_connect_provider_ar_ns").ColumnType(schema.ColumnTypeStringArray).
-			Extractor(column_value_extractor.StructSelector("OpenIdConnectProviderARNs")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("identity_pool_tags").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("IdentityPoolTags")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("saml_provider_ar_ns").ColumnType(schema.ColumnTypeStringArray).
 			Extractor(column_value_extractor.StructSelector("SamlProviderARNs")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("supported_login_providers").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("supported_login_providers").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("SupportedLoginProviders")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("result_metadata").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ResultMetadata")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("allow_unauthenticated_identities").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("AllowUnauthenticatedIdentities")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("allow_classic_flow").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("AllowClassicFlow")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cognito_identity_providers").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("CognitoIdentityProviders")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("developer_provider_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeveloperProviderName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("identity_pool_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IdentityPoolId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("open_id_connect_provider_ar_ns").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("OpenIdConnectProviderARNs")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IdentityPoolId")).Build(),
 	}
 }
 

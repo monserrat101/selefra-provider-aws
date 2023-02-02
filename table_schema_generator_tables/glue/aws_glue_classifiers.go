@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/glue"
 	"github.com/aws/aws-sdk-go-v2/service/glue/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -69,13 +69,12 @@ func (x *TableAwsGlueClassifiersGenerator) GetExpandClientTask() func(ctx contex
 
 func (x *TableAwsGlueClassifiersGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("csv_classifier").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("grok_classifier").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("json_classifier").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("grok_classifier").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("GrokClassifier")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("json_classifier").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("JsonClassifier")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("xml_classifier").ColumnType(schema.ColumnTypeJSON).
 			Extractor(column_value_extractor.StructSelector("XMLClassifier")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
@@ -107,6 +106,10 @@ func (x *TableAwsGlueClassifiersGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("csv_classifier").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("CsvClassifier")).Build(),
 	}
 }
 

@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/appsync"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -41,7 +41,7 @@ func (x *TableAwsAppsyncGraphqlApisGenerator) GetDataSource() *schema.DataSource
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config appsync.ListGraphqlApisInput
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().AppSync
+			svc := c.AwsServices().Appsync
 			for {
 				output, err := svc.ListGraphqlApis(ctx, &config, func(options *appsync.Options) {
 					options.Region = c.Region
@@ -67,26 +67,37 @@ func (x *TableAwsAppsyncGraphqlApisGenerator) GetExpandClientTask() func(ctx con
 
 func (x *TableAwsAppsyncGraphqlApisGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("lambda_authorizer_config").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("log_config").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("user_pool_config").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("authentication_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("uris").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("waf_web_acl_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("additional_authentication_providers").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("api_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Name")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("user_pool_config").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("UserPoolConfig")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("waf_web_acl_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("WafWebAclArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Tags")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("log_config").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("LogConfig")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("lambda_authorizer_config").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("LambdaAuthorizerConfig")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("open_id_connect_config").ColumnType(schema.ColumnTypeJSON).
 			Extractor(column_value_extractor.StructSelector("OpenIDConnectConfig")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("xray_enabled").ColumnType(schema.ColumnTypeBool).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("uris").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Uris")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("xray_enabled").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("XrayEnabled")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("additional_authentication_providers").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("AdditionalAuthenticationProviders")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("api_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ApiId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("authentication_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AuthenticationType")).Build(),
 	}
 }
 

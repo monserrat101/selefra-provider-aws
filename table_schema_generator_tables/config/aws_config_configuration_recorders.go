@@ -2,12 +2,15 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/configservice"
 	"github.com/aws/aws-sdk-go-v2/service/configservice/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -42,7 +45,7 @@ func (x *TableAwsConfigConfigurationRecordersGenerator) GetDataSource() *schema.
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			c := client.(*aws_client.Client)
 
-			resp, err := c.AwsServices().ConfigService.DescribeConfigurationRecorders(ctx, &configservice.DescribeConfigurationRecordersInput{})
+			resp, err := c.AwsServices().Configservice.DescribeConfigurationRecorders(ctx, &configservice.DescribeConfigurationRecordersInput{})
 			if err != nil {
 				return schema.NewDiagnosticsErrorPullTable(task.Table, err)
 
@@ -54,7 +57,7 @@ func (x *TableAwsConfigConfigurationRecordersGenerator) GetDataSource() *schema.
 			for i, configurationRecorder := range resp.ConfigurationRecorders {
 				names[i] = *configurationRecorder.Name
 			}
-			status, err := c.AwsServices().ConfigService.DescribeConfigurationRecorderStatus(ctx, &configservice.DescribeConfigurationRecorderStatusInput{
+			status, err := c.AwsServices().Configservice.DescribeConfigurationRecorderStatus(ctx, &configservice.DescribeConfigurationRecorderStatusInput{
 				ConfigurationRecorderNames: names,
 			})
 			if err != nil {
@@ -109,16 +112,18 @@ func (x *TableAwsConfigConfigurationRecordersGenerator) GetExpandClientTask() fu
 
 func (x *TableAwsConfigConfigurationRecordersGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("role_arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("RoleARN")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status_last_error_message").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("configuration_recorder").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ConfigurationRecorder")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status_last_error_code").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StatusLastErrorCode")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status_last_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StatusLastStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status_last_stop_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("StatusLastStopTime")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status_last_stop_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status_last_error_code").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("recording_group").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status_last_status").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -126,7 +131,13 @@ func (x *TableAwsConfigConfigurationRecordersGenerator) GetColumns() []*schema.C
 				extractor := func() (any, error) {
 					cl := client.(*aws_client.Client)
 					cfg := result.(ConfigurationRecorderWrapper)
-					return cl.ARN("config", "config-recorder", *cfg.Name), nil
+					return arn.ARN{
+						Partition:	cl.Partition,
+						Service:	"config",
+						Region:		cl.Region,
+						AccountID:	cl.AccountID,
+						Resource:	fmt.Sprintf("config-recorder/%s", aws.ToString(cfg.Name)),
+					}.String(), nil
 				}
 				extractResultValue, err := extractor()
 				if err != nil {
@@ -135,13 +146,16 @@ func (x *TableAwsConfigConfigurationRecordersGenerator) GetColumns() []*schema.C
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status_last_start_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status_last_status_change_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status_recording").ColumnType(schema.ColumnTypeBool).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status_last_error_message").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StatusLastErrorMessage")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status_last_start_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("StatusLastStartTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status_last_status_change_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("StatusLastStatusChangeTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status_recording").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("StatusRecording")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 	}
 }
 

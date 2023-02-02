@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/firehose"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -79,24 +79,37 @@ func (x *TableAwsFirehoseDeliveryStreamsGenerator) GetColumns() []*schema.Column
 	return []*schema.Column{
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("delivery_stream_status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("source").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("last_update_timestamp").ColumnType(schema.ColumnTypeTimestamp).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("delivery_stream_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliveryStreamType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("has_more_destinations").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("HasMoreDestinations")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("DeliveryStreamARN")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("destinations").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("version_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("failure_description").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("delivery_stream_status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliveryStreamStatus")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("version_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VersionId")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("delivery_stream_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("has_more_destinations").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("create_timestamp").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("delivery_stream_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("delivery_stream_encryption_configuration").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("source").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Source")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("delivery_stream_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliveryStreamName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("create_timestamp").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreateTimestamp")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("delivery_stream_encryption_configuration").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("DeliveryStreamEncryptionConfiguration")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("last_update_timestamp").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("LastUpdateTimestamp")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliveryStreamARN")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("delivery_stream_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DeliveryStreamARN")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("destinations").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Destinations")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("failure_description").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("FailureDescription")).Build(),
 	}
 }
 

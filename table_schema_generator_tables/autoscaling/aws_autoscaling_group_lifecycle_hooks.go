@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling/types"
 	"github.com/aws/smithy-go"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -61,7 +61,7 @@ var groupNotFoundRegex = regexp.MustCompile(`AutoScalingGroup name not found|Gro
 
 type AutoScalingGroupWrapper struct {
 	types.AutoScalingGroup
-	NotificationConfigurations []types.NotificationConfiguration
+	NotificationConfigurations	[]types.NotificationConfiguration
 }
 
 func isAutoScalingGroupNotExistsError(err error) bool {
@@ -80,25 +80,32 @@ func (x *TableAwsAutoscalingGroupLifecycleHooksGenerator) GetExpandClientTask() 
 
 func (x *TableAwsAutoscalingGroupLifecycleHooksGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("global_timeout").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("GlobalTimeout")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("group_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("lifecycle_hook_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("notification_target_arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("NotificationTargetARN")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_autoscaling_groups_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_autoscaling_groups.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("heartbeat_timeout").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("HeartbeatTimeout")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("heartbeat_timeout").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("notification_metadata").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("auto_scaling_group_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("default_result").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("lifecycle_hook_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LifecycleHookName")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("role_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("RoleARN")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("global_timeout").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("lifecycle_transition").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_autoscaling_groups_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_autoscaling_groups.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("auto_scaling_group_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AutoScalingGroupName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("default_result").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("DefaultResult")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("lifecycle_transition").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LifecycleTransition")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("notification_metadata").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("NotificationMetadata")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("notification_target_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("NotificationTargetARN")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
 			Extractor(column_value_extractor.UUID()).Build(),
 	}

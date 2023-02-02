@@ -1,6 +1,7 @@
 package apigatewayv2fix
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -29,7 +30,7 @@ type awsRestjson1_deserializeOpGetDomainNames struct {
 }
 
 func (*awsRestjson1_deserializeOpGetDomainNames) ID() string {
-	return "OperationDeserializer"
+	return constants.OperationDeserializer
 }
 
 func (m *awsRestjson1_deserializeOpGetDomainNames) HandleDeserialize(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
@@ -42,7 +43,7 @@ func (m *awsRestjson1_deserializeOpGetDomainNames) HandleDeserialize(ctx context
 
 	response, ok := out.RawResponse.(*smithyhttp.Response)
 	if !ok {
-		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("unknown transport type %T", out.RawResponse)}
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf(constants.UnknowntransporttypeT, out.RawResponse)}
 	}
 
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
@@ -63,7 +64,7 @@ func (m *awsRestjson1_deserializeOpGetDomainNames) HandleDeserialize(ctx context
 		var snapshot bytes.Buffer
 		io.Copy(&snapshot, ringBuffer)
 		err = &smithy.DeserializationError{
-			Err:		fmt.Errorf("failed to decode response body, %w", err),
+			Err:		fmt.Errorf(constants.Failedtodecoderesponsebodyw, err),
 			Snapshot:	snapshot.Bytes(),
 		}
 		return out, metadata, err
@@ -74,7 +75,7 @@ func (m *awsRestjson1_deserializeOpGetDomainNames) HandleDeserialize(ctx context
 		var snapshot bytes.Buffer
 		io.Copy(&snapshot, ringBuffer)
 		return out, metadata, &smithy.DeserializationError{
-			Err:		fmt.Errorf("failed to decode response body with invalid JSON, %w", err),
+			Err:		fmt.Errorf(constants.FailedtodecoderesponsebodywithinvalidJSONw, err),
 			Snapshot:	snapshot.Bytes(),
 		}
 	}
@@ -85,14 +86,14 @@ func (m *awsRestjson1_deserializeOpGetDomainNames) HandleDeserialize(ctx context
 func awsRestjson1_deserializeOpErrorGetDomainNames(response *smithyhttp.Response, metadata *middleware.Metadata) error {
 	var errorBuffer bytes.Buffer
 	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
-		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
+		return &smithy.DeserializationError{Err: fmt.Errorf(constants.Failedtocopyerrorresponsebodyw, err)}
 	}
 	errorBody := bytes.NewReader(errorBuffer.Bytes())
 
-	errorCode := "UnknownError"
+	errorCode := constants.UnknownError
 	errorMessage := errorCode
 
-	code := response.Header.Get("X-Amzn-ErrorType")
+	code := response.Header.Get(constants.XAmznErrorType)
 	if len(code) != 0 {
 		errorCode = restjson.SanitizeErrorCode(code)
 	}
@@ -108,7 +109,7 @@ func awsRestjson1_deserializeOpErrorGetDomainNames(response *smithyhttp.Response
 		var snapshot bytes.Buffer
 		io.Copy(&snapshot, ringBuffer)
 		err = &smithy.DeserializationError{
-			Err:		fmt.Errorf("failed to decode response body, %w", err),
+			Err:		fmt.Errorf(constants.Failedtodecoderesponsebodyw, err),
 			Snapshot:	snapshot.Bytes(),
 		}
 		return err
@@ -123,13 +124,13 @@ func awsRestjson1_deserializeOpErrorGetDomainNames(response *smithyhttp.Response
 	}
 
 	switch {
-	case strings.EqualFold("BadRequestException", errorCode):
+	case strings.EqualFold(constants.BadRequestException, errorCode):
 		return awsRestjson1_deserializeErrorBadRequestException(response, errorBody)
 
-	case strings.EqualFold("NotFoundException", errorCode):
+	case strings.EqualFold(constants.NotFoundException, errorCode):
 		return awsRestjson1_deserializeErrorNotFoundException(response, errorBody)
 
-	case strings.EqualFold("TooManyRequestsException", errorCode):
+	case strings.EqualFold(constants.TooManyRequestsException, errorCode):
 		return awsRestjson1_deserializeErrorTooManyRequestsException(response, errorBody)
 
 	default:
@@ -144,7 +145,7 @@ func awsRestjson1_deserializeOpErrorGetDomainNames(response *smithyhttp.Response
 
 func awsRestjson1_deserializeOpDocumentGetDomainNamesOutput(v **apigatewayv2.GetDomainNamesOutput, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -152,7 +153,7 @@ func awsRestjson1_deserializeOpDocumentGetDomainNamesOutput(v **apigatewayv2.Get
 
 	shape, ok := value.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var sv *apigatewayv2.GetDomainNamesOutput
@@ -164,16 +165,16 @@ func awsRestjson1_deserializeOpDocumentGetDomainNamesOutput(v **apigatewayv2.Get
 
 	for key, value := range shape {
 		switch key {
-		case "items":
+		case constants.Items:
 			if err := awsRestjson1_deserializeDocument__listOfDomainName(&sv.Items, value); err != nil {
 				return err
 			}
 
-		case "nextToken":
+		case constants.NextToken:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected NextToken to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedNextTokentobeoftypestringgotTinstead, value)
 				}
 				sv.NextToken = ptr.String(jtv)
 			}
@@ -200,7 +201,7 @@ func awsRestjson1_deserializeErrorBadRequestException(response *smithyhttp.Respo
 		var snapshot bytes.Buffer
 		io.Copy(&snapshot, ringBuffer)
 		err = &smithy.DeserializationError{
-			Err:		fmt.Errorf("failed to decode response body, %w", err),
+			Err:		fmt.Errorf(constants.Failedtodecoderesponsebodyw, err),
 			Snapshot:	snapshot.Bytes(),
 		}
 		return err
@@ -212,7 +213,7 @@ func awsRestjson1_deserializeErrorBadRequestException(response *smithyhttp.Respo
 		var snapshot bytes.Buffer
 		io.Copy(&snapshot, ringBuffer)
 		err = &smithy.DeserializationError{
-			Err:		fmt.Errorf("failed to decode response body, %w", err),
+			Err:		fmt.Errorf(constants.Failedtodecoderesponsebodyw, err),
 			Snapshot:	snapshot.Bytes(),
 		}
 		return err
@@ -236,7 +237,7 @@ func awsRestjson1_deserializeErrorNotFoundException(response *smithyhttp.Respons
 		var snapshot bytes.Buffer
 		io.Copy(&snapshot, ringBuffer)
 		err = &smithy.DeserializationError{
-			Err:		fmt.Errorf("failed to decode response body, %w", err),
+			Err:		fmt.Errorf(constants.Failedtodecoderesponsebodyw, err),
 			Snapshot:	snapshot.Bytes(),
 		}
 		return err
@@ -248,7 +249,7 @@ func awsRestjson1_deserializeErrorNotFoundException(response *smithyhttp.Respons
 		var snapshot bytes.Buffer
 		io.Copy(&snapshot, ringBuffer)
 		err = &smithy.DeserializationError{
-			Err:		fmt.Errorf("failed to decode response body, %w", err),
+			Err:		fmt.Errorf(constants.Failedtodecoderesponsebodyw, err),
 			Snapshot:	snapshot.Bytes(),
 		}
 		return err
@@ -272,7 +273,7 @@ func awsRestjson1_deserializeErrorTooManyRequestsException(response *smithyhttp.
 		var snapshot bytes.Buffer
 		io.Copy(&snapshot, ringBuffer)
 		err = &smithy.DeserializationError{
-			Err:		fmt.Errorf("failed to decode response body, %w", err),
+			Err:		fmt.Errorf(constants.Failedtodecoderesponsebodyw, err),
 			Snapshot:	snapshot.Bytes(),
 		}
 		return err
@@ -284,7 +285,7 @@ func awsRestjson1_deserializeErrorTooManyRequestsException(response *smithyhttp.
 		var snapshot bytes.Buffer
 		io.Copy(&snapshot, ringBuffer)
 		err = &smithy.DeserializationError{
-			Err:		fmt.Errorf("failed to decode response body, %w", err),
+			Err:		fmt.Errorf(constants.Failedtodecoderesponsebodyw, err),
 			Snapshot:	snapshot.Bytes(),
 		}
 		return err
@@ -297,7 +298,7 @@ func awsRestjson1_deserializeErrorTooManyRequestsException(response *smithyhttp.
 
 func awsRestjson1_deserializeDocument__listOfDomainName(v *[]types.DomainName, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -305,7 +306,7 @@ func awsRestjson1_deserializeDocument__listOfDomainName(v *[]types.DomainName, v
 
 	shape, ok := value.([]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var cv []types.DomainName
@@ -331,7 +332,7 @@ func awsRestjson1_deserializeDocument__listOfDomainName(v *[]types.DomainName, v
 
 func awsRestjson1_deserializeDocumentBadRequestException(v **types.BadRequestException, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -339,7 +340,7 @@ func awsRestjson1_deserializeDocumentBadRequestException(v **types.BadRequestExc
 
 	shape, ok := value.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var sv *types.BadRequestException
@@ -351,11 +352,11 @@ func awsRestjson1_deserializeDocumentBadRequestException(v **types.BadRequestExc
 
 	for key, value := range shape {
 		switch key {
-		case "message":
+		case constants.Message:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected __string to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedstringtobeoftypestringgotTinstead, value)
 				}
 				sv.Message = ptr.String(jtv)
 			}
@@ -371,7 +372,7 @@ func awsRestjson1_deserializeDocumentBadRequestException(v **types.BadRequestExc
 
 func awsRestjson1_deserializeDocumentTooManyRequestsException(v **types.TooManyRequestsException, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -379,7 +380,7 @@ func awsRestjson1_deserializeDocumentTooManyRequestsException(v **types.TooManyR
 
 	shape, ok := value.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var sv *types.TooManyRequestsException
@@ -391,20 +392,20 @@ func awsRestjson1_deserializeDocumentTooManyRequestsException(v **types.TooManyR
 
 	for key, value := range shape {
 		switch key {
-		case "limitType":
+		case constants.LimitType:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected __string to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedstringtobeoftypestringgotTinstead, value)
 				}
 				sv.LimitType = ptr.String(jtv)
 			}
 
-		case "message":
+		case constants.Message:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected __string to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedstringtobeoftypestringgotTinstead, value)
 				}
 				sv.Message = ptr.String(jtv)
 			}
@@ -420,7 +421,7 @@ func awsRestjson1_deserializeDocumentTooManyRequestsException(v **types.TooManyR
 
 func awsRestjson1_deserializeDocumentDomainName(v **types.DomainName, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -428,7 +429,7 @@ func awsRestjson1_deserializeDocumentDomainName(v **types.DomainName, value inte
 
 	shape, ok := value.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var sv *types.DomainName
@@ -440,35 +441,35 @@ func awsRestjson1_deserializeDocumentDomainName(v **types.DomainName, value inte
 
 	for key, value := range shape {
 		switch key {
-		case "apiMappingSelectionExpression":
+		case constants.ApiMappingSelectionExpression:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected SelectionExpression to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedSelectionExpressiontobeoftypestringgotTinstead, value)
 				}
 				sv.ApiMappingSelectionExpression = ptr.String(jtv)
 			}
 
-		case "domainName":
+		case constants.DomainName:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected StringWithLengthBetween1And512 to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedStringWithLengthBetweenAndtobeoftypestringgotTinstead, value)
 				}
 				sv.DomainName = ptr.String(jtv)
 			}
 
-		case "domainNameConfigurations":
+		case constants.DomainNameConfigurations:
 			if err := awsRestjson1_deserializeDocumentDomainNameConfigurations(&sv.DomainNameConfigurations, value); err != nil {
 				return err
 			}
 
-		case "mutualTlsAuthentication":
+		case constants.MutualTlsAuthentication:
 			if err := awsRestjson1_deserializeDocumentMutualTlsAuthentication(&sv.MutualTlsAuthentication, value); err != nil {
 				return err
 			}
 
-		case "tags":
+		case constants.Tags:
 			if err := awsRestjson1_deserializeDocumentTags(&sv.Tags, value); err != nil {
 				return err
 			}
@@ -484,7 +485,7 @@ func awsRestjson1_deserializeDocumentDomainName(v **types.DomainName, value inte
 
 func awsRestjson1_deserializeDocumentDomainNameConfigurations(v *[]types.DomainNameConfiguration, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -492,7 +493,7 @@ func awsRestjson1_deserializeDocumentDomainNameConfigurations(v *[]types.DomainN
 
 	shape, ok := value.([]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var cv []types.DomainNameConfiguration
@@ -518,7 +519,7 @@ func awsRestjson1_deserializeDocumentDomainNameConfigurations(v *[]types.DomainN
 
 func awsRestjson1_deserializeDocumentMutualTlsAuthentication(v **types.MutualTlsAuthentication, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -526,7 +527,7 @@ func awsRestjson1_deserializeDocumentMutualTlsAuthentication(v **types.MutualTls
 
 	shape, ok := value.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var sv *types.MutualTlsAuthentication
@@ -538,16 +539,16 @@ func awsRestjson1_deserializeDocumentMutualTlsAuthentication(v **types.MutualTls
 
 	for key, value := range shape {
 		switch key {
-		case "truststoreUri":
+		case constants.TruststoreUri:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected UriWithLengthBetween1And2048 to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedUriWithLengthBetweenAndtobeoftypestringgotTinstead, value)
 				}
 				sv.TruststoreUri = ptr.String(jtv)
 			}
 
-		case "truststoreVersion":
+		case constants.TruststoreVersion:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
@@ -556,7 +557,7 @@ func awsRestjson1_deserializeDocumentMutualTlsAuthentication(v **types.MutualTls
 				sv.TruststoreVersion = ptr.String(jtv)
 			}
 
-		case "truststoreWarnings":
+		case constants.TruststoreWarnings:
 			if err := awsRestjson1_deserializeDocument__listOf__string(&sv.TruststoreWarnings, value); err != nil {
 				return err
 			}
@@ -572,7 +573,7 @@ func awsRestjson1_deserializeDocumentMutualTlsAuthentication(v **types.MutualTls
 
 func awsRestjson1_deserializeDocumentTags(v *map[string]string, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -580,7 +581,7 @@ func awsRestjson1_deserializeDocumentTags(v *map[string]string, value interface{
 
 	shape, ok := value.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var mv map[string]string
@@ -608,7 +609,7 @@ func awsRestjson1_deserializeDocumentTags(v *map[string]string, value interface{
 
 func awsRestjson1_deserializeDocumentNotFoundException(v **types.NotFoundException, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -616,7 +617,7 @@ func awsRestjson1_deserializeDocumentNotFoundException(v **types.NotFoundExcepti
 
 	shape, ok := value.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var sv *types.NotFoundException
@@ -628,20 +629,20 @@ func awsRestjson1_deserializeDocumentNotFoundException(v **types.NotFoundExcepti
 
 	for key, value := range shape {
 		switch key {
-		case "message":
+		case constants.Message:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected __string to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedstringtobeoftypestringgotTinstead, value)
 				}
 				sv.Message = ptr.String(jtv)
 			}
 
-		case "resourceType":
+		case constants.ResourceType:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected __string to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedstringtobeoftypestringgotTinstead, value)
 				}
 				sv.ResourceType = ptr.String(jtv)
 			}
@@ -657,7 +658,7 @@ func awsRestjson1_deserializeDocumentNotFoundException(v **types.NotFoundExcepti
 
 func awsRestjson1_deserializeDocumentDomainNameConfiguration(v **types.DomainNameConfiguration, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -665,7 +666,7 @@ func awsRestjson1_deserializeDocumentDomainNameConfiguration(v **types.DomainNam
 
 	shape, ok := value.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var sv *types.DomainNameConfiguration
@@ -677,25 +678,25 @@ func awsRestjson1_deserializeDocumentDomainNameConfiguration(v **types.DomainNam
 
 	for key, value := range shape {
 		switch key {
-		case "apiGatewayDomainName":
+		case constants.ApiGatewayDomainName:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected __string to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedstringtobeoftypestringgotTinstead, value)
 				}
 				sv.ApiGatewayDomainName = ptr.String(jtv)
 			}
 
-		case "certificateArn":
+		case constants.CertificateArn:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected Arn to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedArntobeoftypestringgotTinstead, value)
 				}
 				sv.CertificateArn = ptr.String(jtv)
 			}
 
-		case "certificateName":
+		case constants.CertificateName:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
@@ -704,12 +705,12 @@ func awsRestjson1_deserializeDocumentDomainNameConfiguration(v **types.DomainNam
 				sv.CertificateName = ptr.String(jtv)
 			}
 
-		case "certificateUploadDate":
+		case constants.CertificateUploadDate:
 			if value != nil {
 
 				jtv, ok := value.(json.Number)
 				if !ok {
-					return fmt.Errorf("expected json.Number to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedjsonNumbertobeoftypestringgotTinstead, value)
 				}
 				f, err := jtv.Float64()
 				if err != nil {
@@ -719,47 +720,47 @@ func awsRestjson1_deserializeDocumentDomainNameConfiguration(v **types.DomainNam
 				sv.CertificateUploadDate = ptr.Time(t)
 			}
 
-		case "domainNameStatus":
+		case constants.DomainNameStatus:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected DomainNameStatus to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedDomainNameStatustobeoftypestringgotTinstead, value)
 				}
 				sv.DomainNameStatus = types.DomainNameStatus(jtv)
 			}
 
-		case "domainNameStatusMessage":
+		case constants.DomainNameStatusMessage:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected __string to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedstringtobeoftypestringgotTinstead, value)
 				}
 				sv.DomainNameStatusMessage = ptr.String(jtv)
 			}
 
-		case "endpointType":
+		case constants.EndpointType:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected EndpointType to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedEndpointTypetobeoftypestringgotTinstead, value)
 				}
 				sv.EndpointType = types.EndpointType(jtv)
 			}
 
-		case "hostedZoneId":
+		case constants.HostedZoneId:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected __string to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedstringtobeoftypestringgotTinstead, value)
 				}
 				sv.HostedZoneId = ptr.String(jtv)
 			}
 
-		case "securityPolicy":
+		case constants.SecurityPolicy:
 			if value != nil {
 				jtv, ok := value.(string)
 				if !ok {
-					return fmt.Errorf("expected SecurityPolicy to be of type string, got %T instead", value)
+					return fmt.Errorf(constants.ExpectedSecurityPolicytobeoftypestringgotTinstead, value)
 				}
 				sv.SecurityPolicy = types.SecurityPolicy(jtv)
 			}
@@ -775,7 +776,7 @@ func awsRestjson1_deserializeDocumentDomainNameConfiguration(v **types.DomainNam
 
 func awsRestjson1_deserializeDocument__listOf__string(v *[]string, value interface{}) error {
 	if v == nil {
-		return fmt.Errorf("unexpected nil of type %T", v)
+		return fmt.Errorf(constants.UnexpectedniloftypeT, v)
 	}
 	if value == nil {
 		return nil
@@ -783,7 +784,7 @@ func awsRestjson1_deserializeDocument__listOf__string(v *[]string, value interfa
 
 	shape, ok := value.([]interface{})
 	if !ok {
-		return fmt.Errorf("unexpected JSON type %v", value)
+		return fmt.Errorf(constants.UnexpectedJSONtypev, value)
 	}
 
 	var cv []string
@@ -798,7 +799,7 @@ func awsRestjson1_deserializeDocument__listOf__string(v *[]string, value interfa
 		if value != nil {
 			jtv, ok := value.(string)
 			if !ok {
-				return fmt.Errorf("expected __string to be of type string, got %T instead", value)
+				return fmt.Errorf(constants.ExpectedstringtobeoftypestringgotTinstead, value)
 			}
 			col = jtv
 		}

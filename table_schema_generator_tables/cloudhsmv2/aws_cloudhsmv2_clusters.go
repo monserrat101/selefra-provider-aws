@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudhsmv2"
 	"github.com/aws/aws-sdk-go-v2/service/cloudhsmv2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -42,7 +42,7 @@ func (x *TableAwsCloudhsmv2ClustersGenerator) GetDataSource() *schema.DataSource
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			cl := client.(*aws_client.Client)
-			svc := cl.AwsServices().CloudHSMV2
+			svc := cl.AwsServices().Cloudhsmv2
 			var input cloudhsmv2.DescribeClustersInput
 			paginator := cloudhsmv2.NewDescribeClustersPaginator(svc, &input)
 			for paginator.HasMorePages() {
@@ -64,7 +64,20 @@ func (x *TableAwsCloudhsmv2ClustersGenerator) GetExpandClientTask() func(ctx con
 
 func (x *TableAwsCloudhsmv2ClustersGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("hsms").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("state_message").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("StateMessage")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tag_list").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("TagList")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("backup_policy").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("BackupPolicy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("certificates").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Certificates")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("security_group").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SecurityGroup")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
@@ -88,26 +101,29 @@ func (x *TableAwsCloudhsmv2ClustersGenerator) GetColumns() []*schema.Column {
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("backup_policy").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("backup_retention_policy").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cluster_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("hsm_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("vpc_id").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("state_message").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("certificates").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("create_timestamp").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("security_group").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("source_backup_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("subnet_mapping").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("pre_co_password").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("backup_retention_policy").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("BackupRetentionPolicy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("create_timestamp").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreateTimestamp")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("vpc_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VpcId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cluster_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ClusterId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("hsm_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("HsmType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("state").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("State")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subnet_mapping").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("SubnetMapping")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("hsms").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Hsms")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("pre_co_password").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PreCoPassword")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("source_backup_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SourceBackupId")).Build(),
 	}
 }
 

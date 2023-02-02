@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -43,7 +43,7 @@ func (x *TableAwsEc2VpcPeeringConnectionsGenerator) GetDataSource() *schema.Data
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			var config ec2.DescribeVpcPeeringConnectionsInput
 			c := client.(*aws_client.Client)
-			svc := client.(*aws_client.Client).AwsServices().EC2
+			svc := client.(*aws_client.Client).AwsServices().Ec2
 			for {
 				output, err := svc.DescribeVpcPeeringConnections(ctx, &config, func(o *ec2.Options) {
 					o.Region = c.Region
@@ -69,13 +69,16 @@ func (x *TableAwsEc2VpcPeeringConnectionsGenerator) GetExpandClientTask() func(c
 
 func (x *TableAwsEc2VpcPeeringConnectionsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("accepter_vpc_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("AccepterVpcInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("expiration_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("ExpirationTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("requester_vpc_info").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("RequesterVpcInfo")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("vpc_peering_connection_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("VpcPeeringConnectionId")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("expiration_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("vpc_peering_connection_id").ColumnType(schema.ColumnTypeString).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
@@ -90,7 +93,7 @@ func (x *TableAwsEc2VpcPeeringConnectionsGenerator) GetColumns() []*schema.Colum
 						Service:	"ec2",
 						Region:		cl.Region,
 						AccountID:	cl.AccountID,
-						Resource:	"vpc_peering_connection/" + aws.ToString(item.VpcPeeringConnectionId),
+						Resource:	"vpc-peering-connection/" + aws.ToString(item.VpcPeeringConnectionId),
 					}
 					return a.String(), nil
 				}
@@ -101,9 +104,11 @@ func (x *TableAwsEc2VpcPeeringConnectionsGenerator) GetColumns() []*schema.Colum
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("accepter_vpc_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("requester_vpc_info").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Status")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
 	}
 }
 

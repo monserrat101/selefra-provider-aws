@@ -8,7 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/mitchellh/mapstructure"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -42,7 +43,7 @@ func (x *TableAwsSnsSubscriptionsGenerator) GetDataSource() *schema.DataSource {
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().SNS
+			svc := c.AwsServices().Sns
 			config := sns.ListSubscriptionsInput{}
 			for {
 				output, err := svc.ListSubscriptions(ctx, &config)
@@ -52,7 +53,7 @@ func (x *TableAwsSnsSubscriptionsGenerator) GetDataSource() *schema.DataSource {
 				}
 				aws_client.SendResults(resultChannel, output.Subscriptions, func(result any) (any, error) {
 					c := client.(*aws_client.Client)
-					svc := c.AwsServices().SNS
+					svc := c.AwsServices().Sns
 					item := result.(types.Subscription)
 					s := Subscription{
 						SubscriptionArn:	item.SubscriptionArn,
@@ -118,7 +119,7 @@ type Subscription struct {
 
 	SubscriptionRoleArn	*string
 
-	UnknownFields	map[string]interface{}	`mapstructure:",remain"`
+	UnknownFields	map[string]any	`mapstructure:",remain"`
 }
 
 func (x *TableAwsSnsSubscriptionsGenerator) GetExpandClientTask() func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask) []*schema.ClientTaskContext {
@@ -127,31 +128,38 @@ func (x *TableAwsSnsSubscriptionsGenerator) GetExpandClientTask() func(ctx conte
 
 func (x *TableAwsSnsSubscriptionsGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("delivery_policy").ColumnType(schema.ColumnTypeJSON).
-			Extractor(aws_client.MarshaledJsonExtractor("DeliveryPolicy")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("redrive_policy").ColumnType(schema.ColumnTypeJSON).
-			Extractor(aws_client.MarshaledJsonExtractor("RedrivePolicy")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("endpoint").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("protocol").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Protocol")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subscription_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SubscriptionArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("pending_confirmation").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("PendingConfirmation")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("redrive_policy").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("endpoint").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Endpoint")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("owner").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Owner")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("confirmation_was_authenticated").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("ConfirmationWasAuthenticated")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("effective_delivery_policy").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("SubscriptionArn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("filter_policy").ColumnType(schema.ColumnTypeJSON).
-			Extractor(aws_client.MarshaledJsonExtractor("FilterPolicy")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("topic_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("effective_delivery_policy").ColumnType(schema.ColumnTypeJSON).
-			Extractor(aws_client.MarshaledJsonExtractor("EffectiveDeliveryPolicy")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("unknown_fields").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("owner").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("protocol").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("confirmation_was_authenticated").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("pending_confirmation").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("raw_message_delivery").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("subscription_role_arn").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("topic_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("TopicArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("filter_policy").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subscription_role_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SubscriptionRoleArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("delivery_policy").ColumnType(schema.ColumnTypeJSON).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("raw_message_delivery").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("RawMessageDelivery")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("unknown_fields").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("UnknownFields")).Build(),
 	}
 }
 

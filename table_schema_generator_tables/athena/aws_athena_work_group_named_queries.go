@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/athena"
 	"github.com/aws/aws-sdk-go-v2/service/athena/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -46,20 +46,20 @@ func (x *TableAwsAthenaWorkGroupNamedQueriesGenerator) GetDataSource() *schema.D
 					return schema.NewDiagnosticsErrorPullTable(task.Table, err)
 
 				}
-				for _, d := range response.NamedQueryIds {
+				aws_client.SendResults(resultChannel, response.NamedQueryIds, func(result any) (any, error) {
+					c := client.(*aws_client.Client)
+					svc := c.AwsServices().Athena
+
+					d := result.(string)
 					dc, err := svc.GetNamedQuery(ctx, &athena.GetNamedQueryInput{
 						NamedQueryId: aws.String(d),
 					})
 					if err != nil {
-						if c.IsNotFoundError(err) {
-							continue
-						}
-						return schema.NewDiagnosticsErrorPullTable(task.Table, err)
-
+						return nil, err
 					}
-					resultChannel <- *dc.NamedQuery
-					return nil
-				}
+					return *dc.NamedQuery, nil
+
+				})
 				if aws.ToString(response.NextToken) == "" {
 					break
 				}
@@ -76,22 +76,28 @@ func (x *TableAwsAthenaWorkGroupNamedQueriesGenerator) GetExpandClientTask() fun
 
 func (x *TableAwsAthenaWorkGroupNamedQueriesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("work_group_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("aws_athena_work_groups_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_athena_work_groups.selefra_id").
+			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
+			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("query_string").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("QueryString")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("named_query_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("NamedQueryId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Description")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("work_group").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("WorkGroup")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("aws_athena_work_groups_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_athena_work_groups.selefra_id").
-			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("work_group_arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("database").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("query_string").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("named_query_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("work_group").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("random id").
-			Extractor(column_value_extractor.UUID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("database").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Database")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Name")).Build(),
 	}
 }
 

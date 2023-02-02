@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dax"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -40,7 +40,7 @@ func (x *TableAwsDaxClustersGenerator) GetDataSource() *schema.DataSource {
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			c := client.(*aws_client.Client)
-			svc := c.AwsServices().DAX
+			svc := c.AwsServices().Dax
 
 			config := dax.DescribeClustersInput{}
 			for {
@@ -69,33 +69,51 @@ func (x *TableAwsDaxClustersGenerator) GetExpandClientTask() func(ctx context.Co
 
 func (x *TableAwsDaxClustersGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("security_groups").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cluster_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("iam_role_arn").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("node_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("parameter_group").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("sse_description").ColumnType(schema.ColumnTypeJSON).
-			Extractor(column_value_extractor.StructSelector("SSEDescription")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cluster_endpoint_encryption_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ClusterEndpointEncryptionType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Description")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("node_ids_to_remove").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("NodeIdsToRemove")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("active_nodes").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("ActiveNodes")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cluster_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ClusterName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("iam_role_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IamRoleArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("nodes").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Nodes")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("security_groups").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("SecurityGroups")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cluster_discovery_endpoint").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ClusterDiscoveryEndpoint")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("node_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("NodeType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("notification_configuration").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("NotificationConfiguration")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("preferred_maintenance_window").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PreferredMaintenanceWindow")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cluster_discovery_endpoint").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("description").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("status").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("total_nodes").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("cluster_endpoint_encryption_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("node_ids_to_remove").ColumnType(schema.ColumnTypeStringArray).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("subnet_group").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("ClusterArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("active_nodes").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("nodes").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("notification_configuration").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("preferred_maintenance_window").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cluster_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ClusterArn")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("parameter_group").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("ParameterGroup")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("sse_description").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("SSEDescription")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("status").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Status")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("subnet_group").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SubnetGroup")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("total_nodes").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("TotalNodes")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 	}
 }
 

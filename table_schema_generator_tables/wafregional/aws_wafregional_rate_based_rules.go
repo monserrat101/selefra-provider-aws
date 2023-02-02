@@ -2,14 +2,15 @@ package wafregional
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/wafregional"
 	"github.com/aws/aws-sdk-go-v2/service/wafregional/types"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 )
 
 type TableAwsWafregionalRateBasedRulesGenerator struct {
@@ -41,7 +42,7 @@ func (x *TableAwsWafregionalRateBasedRulesGenerator) GetDataSource() *schema.Dat
 	return &schema.DataSource{
 		Pull: func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, resultChannel chan<- any) *schema.Diagnostics {
 			cl := client.(*aws_client.Client)
-			svc := cl.AwsServices().WafRegional
+			svc := cl.AwsServices().Wafregional
 			var params wafregional.ListRateBasedRulesInput
 			for {
 				result, err := svc.ListRateBasedRules(ctx, &params, func(o *wafregional.Options) {
@@ -84,20 +85,27 @@ func (x *TableAwsWafregionalRateBasedRulesGenerator) GetExpandClientTask() func(
 
 func (x *TableAwsWafregionalRateBasedRulesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
+		table_schema_generator.NewColumnBuilder().ColumnName("rate_limit").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("RateLimit")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("rate_limit").ColumnType(schema.ColumnTypeBigInt).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
 			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("match_predicates").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("MatchPredicates")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("rule_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RuleId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("metric_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("MetricName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("Name")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any,
 				task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
-				rateBasedRuleARN := func(meta any, id string) string {
-					cl := meta.(*aws_client.Client)
-					return cl.ARN("waf-regional", "ratebasedrule", id)
-				}
+
 				extractor := func() (any, error) {
 					return rateBasedRuleARN(client, *result.(types.RateBasedRule).RuleId), nil
 				}
@@ -108,13 +116,20 @@ func (x *TableAwsWafregionalRateBasedRulesGenerator) GetColumns() []*schema.Colu
 					return extractResultValue, nil
 				}
 			})).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("tags").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("match_predicates").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("rate_key").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("rule_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("metric_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("name").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("rate_key").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RateKey")).Build(),
 	}
+}
+
+func rateBasedRuleARN(taskClient any, id string) string {
+	cl := taskClient.(*aws_client.Client)
+	return arn.ARN{
+		Partition: cl.Partition,
+		Service:   "waf-regional",
+		Region:    cl.Region,
+		AccountID: cl.AccountID,
+		Resource:  fmt.Sprintf("ratebasedrule/%s", id),
+	}.String()
 }
 
 func (x *TableAwsWafregionalRateBasedRulesGenerator) GetSubTables() []*schema.Table {

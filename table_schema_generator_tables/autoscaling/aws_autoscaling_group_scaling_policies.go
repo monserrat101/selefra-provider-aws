@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -71,33 +71,50 @@ func (x *TableAwsAutoscalingGroupScalingPoliciesGenerator) GetExpandClientTask()
 
 func (x *TableAwsAutoscalingGroupScalingPoliciesGenerator) GetColumns() []*schema.Column {
 	return []*schema.Column{
-		table_schema_generator.NewColumnBuilder().ColumnName("cooldown").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("policy_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("target_tracking_configuration").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("auto_scaling_group_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("adjustment_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("estimated_instance_warmup").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("min_adjustment_magnitude").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("scaling_adjustment").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
-			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("alarms").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("enabled").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("metric_aggregation_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("predictive_scaling_configuration").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("PolicyARN")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("policy_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PolicyType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("predictive_scaling_configuration").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("PredictiveScalingConfiguration")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("group_arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.ParentColumnValue("arn")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("min_adjustment_step").ColumnType(schema.ColumnTypeBigInt).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("policy_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("step_adjustments").ColumnType(schema.ColumnTypeJSON).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("aws_autoscaling_groups_selefra_id").ColumnType(schema.ColumnTypeString).SetNotNull().Description("fk to aws_autoscaling_groups.selefra_id").
 			Extractor(column_value_extractor.ParentColumnValue("selefra_id")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("adjustment_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AdjustmentType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("enabled").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("Enabled")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("metric_aggregation_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("MetricAggregationType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("alarms").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("Alarms")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("target_tracking_configuration").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("TargetTrackingConfiguration")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("scaling_adjustment").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("ScalingAdjustment")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("step_adjustments").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("StepAdjustments")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("cooldown").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("Cooldown")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("estimated_instance_warmup").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("EstimatedInstanceWarmup")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("min_adjustment_step").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("MinAdjustmentStep")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("policy_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PolicyName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
+			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PolicyARN")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("auto_scaling_group_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("AutoScalingGroupName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("min_adjustment_magnitude").ColumnType(schema.ColumnTypeBigInt).
+			Extractor(column_value_extractor.StructSelector("MinAdjustmentMagnitude")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("policy_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PolicyARN")).Build(),
 	}
 }
 

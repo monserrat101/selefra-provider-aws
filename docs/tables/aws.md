@@ -1,4 +1,4 @@
-# Provider: AWS
+# Provider: aws
 
 ## Latest Version 
 
@@ -11,7 +11,7 @@ v0.0.3
 # Install 
 
 ```
-selefra provider install aws
+selefre  provider install aws
 ```
 
 

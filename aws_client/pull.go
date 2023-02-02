@@ -1,6 +1,7 @@
 package aws_client
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"context"
 	"golang.org/x/sync/semaphore"
 
@@ -23,7 +24,7 @@ func ListAndDetailResolver(ctx context.Context, clientMeta *schema.ClientMeta, c
 		defer close(done)
 		for detailError := range errorChan {
 
-			clientMeta.WarnF("Error while fetching details: %s", detailError.Error())
+			clientMeta.WarnF(constants.Errorwhilefetchingdetailss, detailError.Error())
 		}
 	}()
 	sem := semaphore.NewWeighted(int64(MAX_GOROUTINES))

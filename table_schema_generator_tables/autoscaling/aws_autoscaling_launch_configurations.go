@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	"github.com/selefra/selefra-provider-aws/aws_client"
-	"github.com/selefra/selefra-provider-aws/table_schema_generator"
+	"github.com/selefra/selefra-provider-sdk/table_schema_generator"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra-provider-sdk/provider/transformer/column_value_extractor"
 )
@@ -68,33 +68,52 @@ func (x *TableAwsAutoscalingLaunchConfigurationsGenerator) GetColumns() []*schem
 	return []*schema.Column{
 		table_schema_generator.NewColumnBuilder().ColumnName("classic_link_vpc_security_groups").ColumnType(schema.ColumnTypeStringArray).
 			Extractor(column_value_extractor.StructSelector("ClassicLinkVPCSecurityGroups")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("kernel_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("placement_tenancy").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("user_data").ColumnType(schema.ColumnTypeString).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("kernel_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("KernelId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("key_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("KeyName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("placement_tenancy").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("PlacementTenancy")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("ramdisk_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("RamdiskId")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("region").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsRegionIDExtractor()).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("created_time").ColumnType(schema.ColumnTypeTimestamp).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("image_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("launch_configuration_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("iam_instance_profile").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("metadata_options").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("security_groups").ColumnType(schema.ColumnTypeStringArray).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("arn").ColumnType(schema.ColumnTypeString).
 			Extractor(column_value_extractor.StructSelector("LaunchConfigurationARN")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("instance_monitoring").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("key_name").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("ramdisk_id").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("instance_type").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("associate_public_ip_address").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("block_device_mappings").ColumnType(schema.ColumnTypeJSON).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("classic_link_vpc_id").ColumnType(schema.ColumnTypeString).
-			Extractor(column_value_extractor.StructSelector("ClassicLinkVPCId")).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("ebs_optimized").ColumnType(schema.ColumnTypeBool).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("spot_price").ColumnType(schema.ColumnTypeString).Build(),
-		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
-			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("created_time").ColumnType(schema.ColumnTypeTimestamp).
+			Extractor(column_value_extractor.StructSelector("CreatedTime")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("launch_configuration_name").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LaunchConfigurationName")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("associate_public_ip_address").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("AssociatePublicIpAddress")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("security_groups").ColumnType(schema.ColumnTypeStringArray).
+			Extractor(column_value_extractor.StructSelector("SecurityGroups")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("user_data").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("UserData")).Build(),
 		table_schema_generator.NewColumnBuilder().ColumnName("account_id").ColumnType(schema.ColumnTypeString).
 			Extractor(aws_client.AwsAccountIDExtractor()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("image_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ImageId")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("block_device_mappings").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("BlockDeviceMappings")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("instance_monitoring").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("InstanceMonitoring")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("launch_configuration_arn").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("LaunchConfigurationARN")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("instance_type").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("InstanceType")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("ebs_optimized").ColumnType(schema.ColumnTypeBool).
+			Extractor(column_value_extractor.StructSelector("EbsOptimized")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("iam_instance_profile").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("IamInstanceProfile")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("metadata_options").ColumnType(schema.ColumnTypeJSON).
+			Extractor(column_value_extractor.StructSelector("MetadataOptions")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("spot_price").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("SpotPrice")).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("selefra_id").ColumnType(schema.ColumnTypeString).SetUnique().Description("primary keys value md5").
+			Extractor(column_value_extractor.PrimaryKeysID()).Build(),
+		table_schema_generator.NewColumnBuilder().ColumnName("classic_link_vpc_id").ColumnType(schema.ColumnTypeString).
+			Extractor(column_value_extractor.StructSelector("ClassicLinkVPCId")).Build(),
 	}
 }
 

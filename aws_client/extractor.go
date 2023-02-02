@@ -1,6 +1,7 @@
 package aws_client
 
 import (
+	"github.com/selefra/selefra-provider-aws/constants"
 	"context"
 	"encoding/json"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
@@ -28,7 +29,7 @@ func TagsExtractor(tagsFieldName ...string) schema.ColumnValueExtractor {
 	}
 	return column_value_extractor.WrapperExtractFunction(func(ctx context.Context, clientMeta *schema.ClientMeta, client any, task *schema.DataSourcePullTask, row *schema.Row, column *schema.Column, result any) (any, *schema.Diagnostics) {
 		for _, tagName := range tagsFieldName {
-			value := ognl.Get(result, "."+tagName)
+			value := ognl.Get(result, constants.Constants_20+tagName)
 			if !reflect_util.IsNil(value) {
 				return TagsToMap(value), nil
 			}
@@ -55,8 +56,8 @@ func TagsToMap(value interface{}) map[string]string {
 			}
 			switch tv.Index(i).Kind() {
 			case reflect.Struct:
-				if tv.Index(i).FieldByName("Key").IsValid() && tv.Index(i).FieldByName("Value").IsValid() {
-					mp[getTagValue(tv.Index(i).FieldByName("Key"))] = getTagValue(tv.Index(i).FieldByName("Value"))
+				if tv.Index(i).FieldByName(constants.Key).IsValid() && tv.Index(i).FieldByName(constants.Value).IsValid() {
+					mp[getTagValue(tv.Index(i).FieldByName(constants.Key))] = getTagValue(tv.Index(i).FieldByName(constants.Value))
 				}
 			}
 		}
@@ -66,7 +67,7 @@ func TagsToMap(value interface{}) map[string]string {
 
 func getTagValue(tv reflect.Value) string {
 	if !tv.IsValid() {
-		return ""
+		return constants.Constants_21
 	}
 
 	switch tv.Kind() {
@@ -75,7 +76,7 @@ func getTagValue(tv reflect.Value) string {
 	case reflect.Ptr, reflect.Interface:
 		return getTagValue(tv.Elem())
 	default:
-		return ""
+		return constants.Constants_22
 	}
 }
 
@@ -123,9 +124,9 @@ func MarshaledJsonExtractor(path string) schema.ColumnValueExtractor {
 }
 
 func (c *Client) RegionGlobalARN(service string, idParts ...string) string {
-	return makeARN(service, c.Partition, "", c.Region, idParts...).String()
+	return makeARN(service, c.Partition, constants.Constants_23, c.Region, idParts...).String()
 }
 
 func (c *Client) PartitionGlobalARN(service string, idParts ...string) string {
-	return makeARN(service, c.Partition, "", "", idParts...).String()
+	return makeARN(service, c.Partition, constants.Constants_24, constants.Constants_25, idParts...).String()
 }
