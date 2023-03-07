@@ -113,7 +113,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.28.0
-	github.com/selefra/selefra-provider-sdk v0.0.17
+	github.com/selefra/selefra-provider-sdk v0.0.21-0.20230307121838-bd7d9a70cc65
 	github.com/selefra/selefra-utils v0.0.2
 	github.com/songzhibin97/go-ognl v0.0.2
 	github.com/spf13/viper v1.13.0
